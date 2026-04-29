@@ -116,7 +116,7 @@ async function refreshProcesses() {
   tbody.innerHTML = sorted.map((p) => {
     const score = (p.score || 0).toFixed(1);
     const sched = p.sched || {};
-    const cpu   = (p.features && p.features.cpu_percent) ? p.features.cpu_percent.toFixed(1) : '—';
+    const cpu   = (p.sched && p.sched.cpu_percent != null) ? Number(p.sched.cpu_percent).toFixed(1) : '—';
     const isSuspicious = p.confidence !== 'NONE';
     return `
       <tr>

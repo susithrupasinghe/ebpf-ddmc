@@ -54,7 +54,6 @@ class MitigationPolicy:
             "confidence": confidence,
             "action":     action,
             "reasons":    result.reasons,
-            "features":   result.features,
             "timestamp":  time.time(),
         }
 

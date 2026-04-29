@@ -14,32 +14,47 @@ Usage:
 """
 
 import argparse
+import http.client
 import json
 import sys
 import time
-import urllib.request
-import urllib.error
 
-API_BASE = "http://127.0.0.1:7373"
+SOCKET_PATH = "/tmp/eddmc.sock"
+
+
+def _conn():
+    return http.client.HTTPConnection("localhost")
 
 
 def _get(path: str) -> dict | list:
     try:
-        with urllib.request.urlopen(f"{API_BASE}{path}", timeout=3) as r:
-            return json.loads(r.read())
-    except urllib.error.URLError:
-        print("Cannot connect to EDDMC daemon. Is it running?", file=sys.stderr)
+        c = http.client.HTTPConnection("localhost")
+        c.sock = _unix_sock()
+        c.request("GET", path)
+        r = c.getresponse()
+        return json.loads(r.read())
+    except Exception:
+        print("Cannot connect to EDDMC daemon. Is it running (sudo)?", file=sys.stderr)
         sys.exit(1)
 
 
 def _post(path: str) -> dict:
-    req = urllib.request.Request(f"{API_BASE}{path}", method="POST", data=b"")
     try:
-        with urllib.request.urlopen(req, timeout=3) as r:
-            return json.loads(r.read())
-    except urllib.error.URLError:
+        c = http.client.HTTPConnection("localhost")
+        c.sock = _unix_sock()
+        c.request("POST", path, body=b"", headers={"Content-Length": "0"})
+        r = c.getresponse()
+        return json.loads(r.read())
+    except Exception:
         print("Cannot connect to EDDMC daemon.", file=sys.stderr)
         sys.exit(1)
+
+
+def _unix_sock():
+    import socket
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.connect(SOCKET_PATH)
+    return s
 
 
 def cmd_status(_args):

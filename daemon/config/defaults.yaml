@@ -16,7 +16,7 @@ daemon:
   log_file: /var/log/eddmc/eddmc.log
 
   # Unix socket for UI / CLI IPC
-  socket_path: /var/run/eddmc.sock
+  socket_path: /tmp/eddmc.sock
 
 detection:
   # Minimum score to generate an alert (0-100)

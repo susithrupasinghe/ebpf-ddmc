@@ -122,6 +122,13 @@ def _empty_process(pid: int, comm: str) -> dict:
             "total_connections": 0,
             "mining_pool_hits": 0,
         },
+        "mem": {
+            "total_mmap_bytes":   0,
+            "scratchpad_allocs":  0,
+            "huge_page_requests": 0,
+            "large_alloc_count":  0,
+            "mprotect_large":     0,
+        },
         "score":      0.0,
         "confidence": "NONE",
         "mitigation": "NONE",
