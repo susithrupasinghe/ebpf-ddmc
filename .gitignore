@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+*.egg-info/
+
+# Logs
+/var/log/eddmc/
+*.log
+*.jsonl
+
+# Runtime
+*.pid
+*.sock
+
+# Node / Electron
+ui/node_modules/
+ui/dist/
+ui/.cache/
+
+# Build artifacts
+dist/
+build/
+*.o
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,63 @@
+# EDDMC Daemon Configuration
+# ----------------------------
+# Edit this file or pass --config=/path/to/custom.yaml on startup.
+
+daemon:
+  # Seconds between each detection scan cycle
+  scan_interval: 5
+
+  # Write PID file here for systemd / init integration
+  pid_file: /var/run/eddmc.pid
+
+  # Log level: DEBUG | INFO | WARNING | ERROR
+  log_level: INFO
+
+  # Log file path (empty = stderr only)
+  log_file: /var/log/eddmc/eddmc.log
+
+  # Unix socket for UI / CLI IPC
+  socket_path: /var/run/eddmc.sock
+
+detection:
+  # Minimum score to generate an alert (0-100)
+  alert_threshold: 20
+
+  # Minimum score to apply throttle
+  throttle_threshold: 40
+
+  # Minimum score to apply network block
+  block_threshold: 60
+
+  # Minimum score to suspend/terminate
+  terminate_threshold: 80
+
+  # Minimum number of syscalls before scoring (avoids FP on new short-lived procs)
+  min_syscalls: 500
+
+  # Minimum seconds a process must exist before being scored
+  min_age_seconds: 10
+
+mitigation:
+  # If false: suspend only, operator must confirm kill
+  auto_kill: false
+
+  # Perform all mitigation steps but do not actually apply them
+  dry_run: false
+
+  # Cgroups v2 root (must be mounted)
+  cgroup_root: /sys/fs/cgroup/eddmc
+
+  # CPU quota percentages per confidence tier
+  throttle_quotas:
+    MEDIUM:   30
+    HIGH:     10
+    CRITICAL:  5
+
+  # Grace period (seconds) between SIGTERM and SIGKILL
+  sigterm_grace: 3
+
+ui:
+  # Port for the Electron UI to connect over HTTP (JSON API)
+  api_port: 7373
+  # Enable CORS for localhost Electron window
+  allow_localhost: true

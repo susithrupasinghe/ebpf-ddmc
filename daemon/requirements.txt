@@ -1,0 +1,6 @@
+# EDDMC Daemon Dependencies
+# Install with: pip3 install -r requirements.txt
+# Note: bcc (python3-bpfcc) must be installed via apt, not pip
+
+psutil>=5.9.0
+PyYAML>=6.0
