@@ -1,5 +1,5 @@
 {
-  "name": "eddmc-ui",
+  "name": "eddmc-client-app",
   "version": "1.0.0",
   "description": "EDDMC - eBPF Cryptojacking Detection Dashboard",
   "main": "src/main/index.js",

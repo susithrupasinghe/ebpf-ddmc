@@ -56,14 +56,14 @@ MSc Research Artifact | IIT / University of Westminster | W2121694
 sudo bash scripts/install.sh
 
 # 2. Start daemon
-sudo python3 daemon/daemon.py --log-level INFO
+sudo python3 daemon/main.py --log-level INFO
 
 # 3. CLI monitoring
 eddmc watch
 eddmc alerts
 
-# 4. UI
-cd ui && npm install && npm start
+# 4. Client app (Electron GUI)
+cd client-app && npm install && npm start
 
 # 5. Trigger test detection
 bash scripts/test_miner.sh
@@ -71,7 +71,7 @@ bash scripts/test_miner.sh
 
 ## Dry-run mode
 ```bash
-sudo python3 daemon/daemon.py --dry-run
+sudo python3 daemon/main.py --dry-run
 ```
 
 ## Project Structure
@@ -82,20 +82,27 @@ ebpf-ddmc/
 │   ├── ebpf/            eBPF C programs (syscall, sched, net monitors)
 │   ├── collector/       Python BCC collectors
 │   ├── detector/        Feature extractor + deterministic scorer
+│   ├── fingerprint/     Distributed Behavioural Fingerprint Registry client
+│   │                    (assessor, packager, submitter, matcher)
 │   ├── mitigator/       throttler, blocker, suspender, terminator, policy
 │   ├── alerts/          Alert bus (IPC + JSONL)
+│   ├── ipc/             Unix-socket HTTP API (CLI + client-app)
 │   ├── cli/             eddmc CLI commands
 │   ├── config/          YAML config
-│   ├── api_server.py    HTTP JSON API for UI
-│   └── daemon.py        Main entry point
-├── ui/
+│   └── main.py          Main entry point
+├── registry/
+│   ├── app.py           FastAPI registry server
+│   ├── db.py            SQLite storage layer
+│   └── run.sh           Dev launcher
+├── client-app/
 │   └── src/
 │       ├── main/        Electron main process
 │       ├── renderer/    Dashboard (HTML + JS)
 │       └── preload.js   Secure IPC bridge
 └── scripts/
     ├── install.sh       System install
-    └── test_miner.sh    Synthetic miner for testing
+    ├── test_miner.sh    Synthetic miner for testing
+    └── test_registry.py Local no-BCC fingerprint-registry simulation
 ```
 
 ## Requirements

@@ -30,6 +30,10 @@ from daemon.detector.engine               import DetectionEngine
 from daemon.mitigator.policy              import MitigationPolicy
 from daemon.alerts.alerter                import AlertBus  # JSONL file log
 from daemon.ipc.socket_server             import UnixSocketServer
+from daemon.fingerprint.assessor          import FingerprintAssessor
+from daemon.fingerprint.packager          import package as package_fingerprint
+from daemon.fingerprint.submitter         import FingerprintSubmitter
+from daemon.fingerprint.matcher           import FingerprintMatcher
 
 
 def setup_logging(level: str, log_file: str | None):
@@ -85,6 +89,26 @@ class EDDMCDaemon:
             dry_run=cfg["mitigation"]["dry_run"],
         )
 
+        # ── Distributed Behavioural Fingerprint Registry (opt-in) ──────────
+        fp_cfg      = cfg.get("fingerprint_registry", {})
+        fp_enabled  = fp_cfg.get("enabled", False)
+        assessor    = None
+        submitter   = None
+        matcher     = None
+
+        if fp_enabled:
+            assessor = FingerprintAssessor(
+                sustained_critical_seconds=fp_cfg.get("sustained_critical_seconds", 60),
+            )
+            submitter = FingerprintSubmitter(fp_cfg["registry_url"])
+            matcher = FingerprintMatcher(
+                registry_url=fp_cfg["registry_url"],
+                threshold=fp_cfg.get("similarity_threshold", 0.85),
+                refresh_interval_hours=fp_cfg.get("refresh_interval_hours", 1),
+            )
+            matcher.start()
+            logger.info("Fingerprint registry enabled: %s", fp_cfg["registry_url"])
+
         def on_detection(result):
             self._detections.append({
                 "pid":        result.pid,
@@ -96,6 +120,16 @@ class EDDMCDaemon:
             })
             if len(self._detections) > 500:
                 self._detections = self._detections[-500:]
+
+            if assessor is not None:
+                evidence = assessor.evaluate(result)
+                if evidence is not None:
+                    fingerprint = package_fingerprint(result.fingerprint, evidence)
+                    logger.info(
+                        "Fingerprint gate PASSED for pid=%d (%s) — submitting to registry",
+                        result.pid, result.comm,
+                    )
+                    submitter.submit_async(fingerprint)
 
         def on_mitigation(result):
             policy.apply(result)
@@ -128,6 +162,7 @@ class EDDMCDaemon:
             on_detection=on_detection,
             on_mitigation=on_mitigation,
             interval_s=cfg["daemon"]["scan_interval"],
+            fingerprint_matcher=matcher,
         )
         engine.start()
 
@@ -165,6 +200,8 @@ class EDDMCDaemon:
         engine.stop()
         for c in collectors:
             c.stop()
+        if matcher is not None:
+            matcher.stop()
         alert_bus.stop()
         ipc.stop()
         logger.info("EDDMC stopped.")

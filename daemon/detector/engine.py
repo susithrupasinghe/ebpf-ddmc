@@ -28,6 +28,11 @@ logger = logging.getLogger("eddmc.detector")
 # Minimum score to increment suspicious_ticks
 TICK_THRESHOLD = 20.0
 
+# Confidence-tier ranking used only to decide whether a fingerprint-registry
+# match should elevate a process (distinct from the mitigation-tier ranking
+# further down, which is a different label set: NONE/ALERT/THROTTLE/BLOCK/TERMINATE)
+CONFIDENCE_RANK = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
+
 
 class DetectionEngine:
     def __init__(
@@ -37,12 +42,14 @@ class DetectionEngine:
         on_detection:   Callable[[ScoringResult], None],
         on_mitigation:  Callable[[ScoringResult], None],
         interval_s:     float = 5.0,
+        fingerprint_matcher=None,
     ):
         self._store         = process_store
         self._lock          = lock
         self._on_detection  = on_detection
         self._on_mitigation = on_mitigation
         self._interval      = interval_s
+        self._matcher       = fingerprint_matcher
         self._running       = False
 
         # pid → TemporalProfile (persistent across scans)
@@ -80,6 +87,25 @@ class DetectionEngine:
                 # ── Build fingerprint and score ────────────────────────────
                 fp     = build_fingerprint(pid, data, temp)
                 result = score(fp)
+
+                # ── Fingerprint-registry acceleration ──────────────────────
+                # A cosine-similarity match against a confirmed variant
+                # elevates straight to HIGH, skipping the normal observation
+                # window -- the detection-acceleration benefit of the registry.
+                if (
+                    self._matcher is not None
+                    and CONFIDENCE_RANK.get(result.confidence, 0) < CONFIDENCE_RANK["HIGH"]
+                ):
+                    match = self._matcher.match(fp)
+                    if match:
+                        result.confidence = "HIGH"
+                        result.mitigation = "BLOCK"
+                        result.score = max(result.score, 60.0)
+                        result.reasons.append(
+                            f"fingerprint registry match: {match['process_name']} "
+                            f"(similarity={match['similarity']:.2f}) — elevated without "
+                            f"waiting for full observation window"
+                        )
 
                 # ── Update temporal state ──────────────────────────────────
                 temp.score_history.append(result.score)

@@ -61,3 +61,23 @@ ui:
   api_port: 7373
   # Enable CORS for localhost Electron window
   allow_localhost: true
+
+fingerprint_registry:
+  # Opt-in only -- disabled by default. No data leaves the host unless an
+  # administrator explicitly enables this (see thesis S3.12 ethics chapter).
+  enabled: false
+
+  # Central registry server (FastAPI + SQLite, see registry/).
+  # Defaults to a locally-simulated registry for development; point this
+  # at a real second node's address for a genuine cross-host experiment.
+  registry_url: http://127.0.0.1:8321
+
+  # Cosine-similarity threshold for elevating a new process to HIGH tier
+  similarity_threshold: 0.85
+
+  # How often the matcher re-downloads the confirmed fingerprint set
+  refresh_interval_hours: 1
+
+  # Confirmation gate: minimum continuous seconds at CRITICAL before a
+  # fingerprint may be packaged and submitted
+  sustained_critical_seconds: 60

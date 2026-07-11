@@ -119,14 +119,14 @@ SCRIPT
 chmod +x /usr/local/bin/eddmc
 info "CLI installed: /usr/local/bin/eddmc"
 
-# ── 8. Node / Electron (UI) ────────────────────────────────────────────────
+# ── 8. Node / Electron (client-app) ────────────────────────────────────────
 if command -v npm &>/dev/null; then
-  info "Installing Electron UI dependencies…"
-  cd "$REPO_DIR/ui" && npm install --silent
-  info "UI ready. Run with: cd ui && npm start"
+  info "Installing Electron client-app dependencies…"
+  cd "$REPO_DIR/client-app" && npm install --silent
+  info "client-app ready. Run with: cd client-app && npm start"
 else
-  warn "npm not found — skipping Electron UI setup"
-  warn "Install Node.js then run: cd ui && npm install"
+  warn "npm not found — skipping Electron client-app setup"
+  warn "Install Node.js then run: cd client-app && npm install"
 fi
 
 echo ""
@@ -135,5 +135,5 @@ echo ""
 echo "  Start daemon:   sudo systemctl start eddmc"
 echo "  Watch live:     eddmc watch"
 echo "  View alerts:    eddmc alerts"
-echo "  Launch UI:      cd ui && npm start"
+echo "  Launch UI:      cd client-app && npm start"
 echo ""
