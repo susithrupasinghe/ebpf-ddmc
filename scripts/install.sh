@@ -92,7 +92,7 @@ Wants=network.target
 
 [Service]
 Type=simple
-ExecStart=$PYTHON $REPO_DIR/daemon/main.py
+ExecStart=$PYTHON "$REPO_DIR/daemon/main.py"
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

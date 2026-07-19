@@ -49,6 +49,12 @@ class FingerprintSubmission(BaseModel):
     evidence: dict = Field(default_factory=dict)
 
 
+class AllowlistSubmission(BaseModel):
+    sha256: str
+    description: Optional[str] = None
+    node_id: Optional[str] = None
+
+
 @app.on_event("startup")
 def _startup():
     db.init_db()
@@ -81,3 +87,39 @@ def confirm_fingerprint(fingerprint_id: str):
     if not ok:
         raise HTTPException(status_code=404, detail="not found or already confirmed")
     return {"fingerprint_id": fingerprint_id, "status": "confirmed"}
+
+
+# ── Allowlist (known-good binary hashes) ────────────────────────────────────
+# Deliberately no AUTO_CONFIRM here, unlike the fingerprint endpoints above:
+# a poisoned entry in a shared allowlist makes every node blind to that exact
+# binary, a far worse failure than a missed miner fingerprint, so every
+# submission sits "pending" until a human explicitly confirms it -- no
+# environment variable can bypass that for this channel.
+
+@app.post("/api/v1/allowlist", status_code=202)
+def submit_allowlist(payload: AllowlistSubmission):
+    status = db.upsert_allowlist_submission(payload.model_dump())
+    return {"sha256": payload.sha256, "status": status}
+
+
+@app.get("/api/v1/allowlist")
+def get_confirmed_allowlist():
+    return db.list_allowlist_confirmed()
+
+
+@app.get("/api/v1/allowlist/pending")
+def get_pending_allowlist():
+    return db.list_allowlist_pending()
+
+
+@app.get("/api/v1/allowlist/stats")
+def get_allowlist_stats():
+    return db.allowlist_stats()
+
+
+@app.post("/api/v1/allowlist/{sha256}/confirm")
+def confirm_allowlist_entry(sha256: str):
+    ok = db.confirm_allowlist(sha256)
+    if not ok:
+        raise HTTPException(status_code=404, detail="not found or already confirmed")
+    return {"sha256": sha256, "status": "confirmed"}

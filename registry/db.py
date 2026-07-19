@@ -48,6 +48,29 @@ def init_db():
             )
             """
         )
+        # Known-good binary hashes, submitted by an admin and shared across
+        # nodes to reduce false positives fleet-wide -- deliberately a
+        # separate table/channel from `fingerprints` above (which shares
+        # confirmed MINER signatures). This one has no auto-confirm mode at
+        # all: a poisoned entry here would make every node blind to that
+        # exact binary, a much worse failure than a missed miner fingerprint,
+        # so every submission sits "pending" until a human confirms it --
+        # see upsert_allowlist_submission(), which never accepts an
+        # auto_confirm flag.
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS allowlist (
+                sha256               TEXT PRIMARY KEY,
+                description          TEXT,
+                submitted_by_node    TEXT,
+                status               TEXT NOT NULL DEFAULT 'pending',
+                submission_count     INTEGER NOT NULL DEFAULT 1,
+                first_submitted_at   REAL NOT NULL,
+                last_submitted_at    REAL NOT NULL,
+                confirmed_at         REAL
+            )
+            """
+        )
         conn.commit()
 
 
@@ -157,3 +180,76 @@ def stats() -> dict:
         "last_updated": last_row["t"],
         "by_process_name": {r["process_name"]: r["c"] for r in by_name},
     }
+
+
+# ── Allowlist (known-good binary hashes) ────────────────────────────────────
+# No auto_confirm parameter anywhere below, deliberately -- see init_db().
+
+def upsert_allowlist_submission(payload: dict) -> str:
+    now = time.time()
+    sha256 = payload["sha256"]
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT status FROM allowlist WHERE sha256 = ?", (sha256,)
+        ).fetchone()
+
+        if row is None:
+            conn.execute(
+                """INSERT INTO allowlist
+                   (sha256, description, submitted_by_node, status,
+                    submission_count, first_submitted_at, last_submitted_at,
+                    confirmed_at)
+                   VALUES (?,?,?,'pending',1,?,?,NULL)""",
+                (sha256, payload.get("description"), payload.get("node_id"), now, now),
+            )
+            conn.commit()
+            return "pending"
+
+        conn.execute(
+            "UPDATE allowlist SET submission_count = submission_count + 1, "
+            "last_submitted_at = ? WHERE sha256 = ?",
+            (now, sha256),
+        )
+        conn.commit()
+        return row["status"]
+
+
+def confirm_allowlist(sha256: str) -> bool:
+    with _connect() as conn:
+        cur = conn.execute(
+            "UPDATE allowlist SET status='confirmed', confirmed_at=? "
+            "WHERE sha256=? AND status!='confirmed'",
+            (time.time(), sha256),
+        )
+        conn.commit()
+        return cur.rowcount > 0
+
+
+def list_allowlist_confirmed() -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT sha256, description, confirmed_at FROM allowlist "
+            "WHERE status='confirmed'"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_allowlist_pending() -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT sha256, description, submitted_by_node, submission_count, "
+            "first_submitted_at FROM allowlist WHERE status='pending'"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def allowlist_stats() -> dict:
+    with _connect() as conn:
+        total = conn.execute("SELECT COUNT(*) c FROM allowlist").fetchone()["c"]
+        pending = conn.execute(
+            "SELECT COUNT(*) c FROM allowlist WHERE status='pending'"
+        ).fetchone()["c"]
+        confirmed = conn.execute(
+            "SELECT COUNT(*) c FROM allowlist WHERE status='confirmed'"
+        ).fetchone()["c"]
+    return {"total_submissions": total, "pending": pending, "confirmed": confirmed}
