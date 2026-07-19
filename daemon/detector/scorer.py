@@ -34,18 +34,20 @@ CRITICAL [80,100]  → + suspend; auto-kill if enabled
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
-import math
+import os
 
 from daemon.detector.fingerprint import BehaviouralFingerprint
 
 
-# ── Weights ────────────────────────────────────────────────────────────────────
+# ── Default weights ──────────────────────────────────────────────────────────
+# Used for any key not present in `detection.weights` in the daemon config, so
+# a partial override in YAML doesn't require repeating every other weight.
 # Max total from all non-network features ≈ 65; pool_connection adds up to 40.
 # A genuine full-speed miner with pool connection should score 85-100.
 # A genuine miner without network (solo/air-gapped) should score 60-75.
 # A benign CPU-intensive process (compile, ML) should score 10-30.
 
-W = {
+DEFAULT_WEIGHTS = {
     # Syscall dimension (max 28)
     "futex_strong":        18,   # futex_ratio >= 0.40
     "futex_moderate":       9,   # futex_ratio >= 0.20
@@ -72,9 +74,25 @@ W = {
     "pool_connection":     40,   # confirmed stratum port TCP connection
 }
 
-# Hard-evidence score floors — applied AFTER weighted sum
-POOL_FLOOR       = 50   # confirmed pool connection → never below MEDIUM
-SCRATCHPAD_FLOOR = 45   # RandomX memory + high CPU → never below MEDIUM
+# Hard-evidence score floors — applied AFTER the weighted sum
+DEFAULT_POOL_FLOOR       = 50   # confirmed pool connection → never below MEDIUM
+DEFAULT_SCRATCHPAD_FLOOR = 45   # RandomX memory + high CPU → never below MEDIUM
+
+# Tier boundaries — keys match `detection.*` in defaults.yaml
+DEFAULT_TIER_BOUNDS = {
+    "alert_threshold":     20,
+    "throttle_threshold":  40,
+    "block_threshold":     60,
+    "terminate_threshold": 80,
+}
+
+_TIER_LABELS = [
+    # (config key, min score, confidence, mitigation)
+    ("terminate_threshold", "CRITICAL", "TERMINATE"),
+    ("block_threshold",     "HIGH",     "BLOCK"),
+    ("throttle_threshold",  "MEDIUM",   "THROTTLE"),
+    ("alert_threshold",     "LOW",      "ALERT"),
+]
 
 
 @dataclass
@@ -88,123 +106,147 @@ class ScoringResult:
     fingerprint:  BehaviouralFingerprint
 
 
-def score(fp: BehaviouralFingerprint) -> ScoringResult:
-    s       = 0.0
-    reasons = []
+class Scorer:
+    """
+    Converts a BehaviouralFingerprint into a suspicion score [0, 100] using a
+    weighted multi-dimensional scoring model.
 
-    sc    = fp.syscall
-    par   = fp.parallelism
-    mem   = fp.memory
-    sch   = fp.scheduler
-    temp  = fp.temporal
-    net   = fp.network
+    Weights, hard-evidence floors, and tier boundaries all come from
+    `detection:` in the daemon config (falling back to the defaults above for
+    any key it omits) so administrators can retune sensitivity for their
+    environment without touching code — see `update()` for live retuning.
+    """
 
-    # ── 1. Syscall fingerprint ─────────────────────────────────────────────
-    if sc.futex_ratio >= 0.40:
-        s += W["futex_strong"]
-        reasons.append(f"futex dominance {sc.futex_ratio:.0%} of all syscalls (strong mining signal)")
-    elif sc.futex_ratio >= 0.20:
-        s += W["futex_moderate"]
-        reasons.append(f"elevated futex ratio {sc.futex_ratio:.0%}")
+    def __init__(self, detection_cfg: dict | None = None):
+        self._apply_config(detection_cfg or {})
 
-    if sc.io_ratio < 0.02 and par.cpu_percent >= 70.0:
-        s += W["compute_pure"]
-        reasons.append(
-            f"compute-pure: only {sc.io_ratio:.1%} I/O syscalls at {par.cpu_percent:.0f}% CPU"
+    def update(self, detection_cfg: dict):
+        """Apply a new set of weights/floors/thresholds to this live instance (no restart needed)."""
+        self._apply_config(detection_cfg)
+
+    def _apply_config(self, cfg: dict):
+        self.weights = {**DEFAULT_WEIGHTS, **(cfg.get("weights") or {})}
+        self.pool_floor = cfg.get("pool_floor", DEFAULT_POOL_FLOOR)
+        self.scratchpad_floor = cfg.get("scratchpad_floor", DEFAULT_SCRATCHPAD_FLOOR)
+        self.tier_bounds = {
+            k: cfg.get(k, default) for k, default in DEFAULT_TIER_BOUNDS.items()
+        }
+
+    def score(self, fp: BehaviouralFingerprint) -> ScoringResult:
+        W = self.weights
+        s       = 0.0
+        reasons = []
+
+        sc    = fp.syscall
+        par   = fp.parallelism
+        mem   = fp.memory
+        sch   = fp.scheduler
+        temp  = fp.temporal
+        net   = fp.network
+
+        # ── 1. Syscall fingerprint ─────────────────────────────────────────
+        if sc.futex_ratio >= 0.40:
+            s += W["futex_strong"]
+            reasons.append(f"futex dominance {sc.futex_ratio:.0%} of all syscalls (strong mining signal)")
+        elif sc.futex_ratio >= 0.20:
+            s += W["futex_moderate"]
+            reasons.append(f"elevated futex ratio {sc.futex_ratio:.0%}")
+
+        if sc.io_ratio < 0.02 and par.cpu_percent >= 70.0:
+            s += W["compute_pure"]
+            reasons.append(
+                f"compute-pure: only {sc.io_ratio:.1%} I/O syscalls at {par.cpu_percent:.0f}% CPU"
+            )
+
+        # ── 2. Parallelism fingerprint ─────────────────────────────────────
+        cpu_count = os.cpu_count() or 1
+
+        if par.thread_count >= cpu_count:
+            s += W["thread_full_sat"]
+            reasons.append(
+                f"thread saturation: {par.thread_count} threads = {cpu_count} logical CPUs"
+            )
+        elif par.thread_count >= int(cpu_count * 0.6):
+            s += W["thread_partial_sat"]
+            reasons.append(
+                f"partial thread saturation: {par.thread_count}/{cpu_count} CPUs"
+            )
+
+        if par.cpu_percent >= 85.0:
+            s += W["cpu_high"]
+            reasons.append(f"sustained CPU {par.cpu_percent:.0f}%")
+
+        # ── 3. Memory fingerprint (RandomX-specific) ────────────────────────
+        if mem.scratchpad_allocs > 0:
+            s += W["scratchpad_exact"]
+            reasons.append(
+                f"RandomX signature: {mem.scratchpad_allocs} × 2MB scratchpad allocation(s) "
+                f"({mem.scratchpad_mb:.0f} MB total)"
+            )
+        if mem.huge_page_requests > 0:
+            s += W["huge_pages"]
+            reasons.append(f"MAP_HUGETLB requested ({mem.huge_page_requests} times)")
+
+        # ── 4. Scheduler fingerprint ─────────────────────────────────────────
+        if sch.cpu_bound_ratio >= 0.92:
+            s += W["cpu_bound_strong"]
+            reasons.append(
+                f"CPU-bound: {sch.cpu_bound_ratio:.0%} involuntary preemptions "
+                f"(never yields voluntarily)"
+            )
+        elif sch.cpu_bound_ratio >= 0.75:
+            s += W["cpu_bound_moderate"]
+            reasons.append(f"mostly CPU-bound: {sch.cpu_bound_ratio:.0%} involuntary preemptions")
+
+        # ── 5. Temporal fingerprint ──────────────────────────────────────────
+        if temp.suspicious_ticks >= 6:
+            s += W["sustained_high"]
+            reasons.append(
+                f"sustained detection: {temp.suspicious_ticks} consecutive scan windows "
+                f"(~{temp.suspicious_ticks * 5}s) — rules out bursty legitimate workloads"
+            )
+        elif temp.suspicious_ticks >= 3:
+            s += W["sustained_medium"]
+            reasons.append(
+                f"persistent suspicion: {temp.suspicious_ticks} consecutive windows"
+            )
+
+        # ── 6. Network fingerprint (hard evidence) ───────────────────────────
+        if net.pool_connections > 0:
+            s += W["pool_connection"]
+            reasons.append(
+                f"stratum pool connection confirmed ({net.pool_connections} hit(s)) — "
+                f"near-conclusive cryptomining evidence"
+            )
+
+        # ── Apply hard-evidence floors ────────────────────────────────────────
+        if net.pool_connections > 0:
+            s = max(s, self.pool_floor)
+        if mem.scratchpad_allocs > 0 and par.cpu_percent >= 70.0:
+            s = max(s, self.scratchpad_floor)
+
+        # ── Temporal penalty for young processes ─────────────────────────────
+        # Don't escalate to HIGH/CRITICAL until we've observed the process for
+        # at least 20 seconds — prevents false positives from startup bursts.
+        if temp.age_seconds < 20.0 and s >= 60.0:
+            s = min(s, 55.0)
+            reasons.append("(score capped: process too young for CRITICAL/HIGH escalation)")
+
+        s = min(max(s, 0.0), 100.0)
+        confidence, mitigation = self._tier(s)
+
+        return ScoringResult(
+            pid=fp.pid,
+            comm=fp.comm,
+            score=round(s, 2),
+            confidence=confidence,
+            mitigation=mitigation,
+            reasons=reasons,
+            fingerprint=fp,
         )
 
-    # ── 2. Parallelism fingerprint ─────────────────────────────────────────
-    import os
-    cpu_count = os.cpu_count() or 1
-
-    if par.thread_count >= cpu_count:
-        s += W["thread_full_sat"]
-        reasons.append(
-            f"thread saturation: {par.thread_count} threads = {cpu_count} logical CPUs"
-        )
-    elif par.thread_count >= int(cpu_count * 0.6):
-        s += W["thread_partial_sat"]
-        reasons.append(
-            f"partial thread saturation: {par.thread_count}/{cpu_count} CPUs"
-        )
-
-    if par.cpu_percent >= 85.0:
-        s += W["cpu_high"]
-        reasons.append(f"sustained CPU {par.cpu_percent:.0f}%")
-
-    # ── 3. Memory fingerprint (RandomX-specific) ───────────────────────────
-    if mem.scratchpad_allocs > 0:
-        s += W["scratchpad_exact"]
-        reasons.append(
-            f"RandomX signature: {mem.scratchpad_allocs} × 2MB scratchpad allocation(s) "
-            f"({mem.scratchpad_mb:.0f} MB total)"
-        )
-    if mem.huge_page_requests > 0:
-        s += W["huge_pages"]
-        reasons.append(f"MAP_HUGETLB requested ({mem.huge_page_requests} times)")
-
-    # ── 4. Scheduler fingerprint ───────────────────────────────────────────
-    if sch.cpu_bound_ratio >= 0.92:
-        s += W["cpu_bound_strong"]
-        reasons.append(
-            f"CPU-bound: {sch.cpu_bound_ratio:.0%} involuntary preemptions "
-            f"(never yields voluntarily)"
-        )
-    elif sch.cpu_bound_ratio >= 0.75:
-        s += W["cpu_bound_moderate"]
-        reasons.append(f"mostly CPU-bound: {sch.cpu_bound_ratio:.0%} involuntary preemptions")
-
-    # ── 5. Temporal fingerprint ────────────────────────────────────────────
-    if temp.suspicious_ticks >= 6:
-        s += W["sustained_high"]
-        reasons.append(
-            f"sustained detection: {temp.suspicious_ticks} consecutive scan windows "
-            f"(~{temp.suspicious_ticks * 5}s) — rules out bursty legitimate workloads"
-        )
-    elif temp.suspicious_ticks >= 3:
-        s += W["sustained_medium"]
-        reasons.append(
-            f"persistent suspicion: {temp.suspicious_ticks} consecutive windows"
-        )
-
-    # ── 6. Network fingerprint (hard evidence) ─────────────────────────────
-    if net.pool_connections > 0:
-        s += W["pool_connection"]
-        reasons.append(
-            f"stratum pool connection confirmed ({net.pool_connections} hit(s)) — "
-            f"near-conclusive cryptomining evidence"
-        )
-
-    # ── Apply hard-evidence floors ─────────────────────────────────────────
-    if net.pool_connections > 0:
-        s = max(s, POOL_FLOOR)
-    if mem.scratchpad_allocs > 0 and par.cpu_percent >= 70.0:
-        s = max(s, SCRATCHPAD_FLOOR)
-
-    # ── Temporal penalty for young processes ───────────────────────────────
-    # Don't escalate to HIGH/CRITICAL until we've observed the process for at
-    # least 20 seconds — prevents false positives from startup bursts.
-    if temp.age_seconds < 20.0 and s >= 60.0:
-        s = min(s, 55.0)
-        reasons.append("(score capped: process too young for CRITICAL/HIGH escalation)")
-
-    s = min(max(s, 0.0), 100.0)
-    confidence, mitigation = _tier(s)
-
-    return ScoringResult(
-        pid=fp.pid,
-        comm=fp.comm,
-        score=round(s, 2),
-        confidence=confidence,
-        mitigation=mitigation,
-        reasons=reasons,
-        fingerprint=fp,
-    )
-
-
-def _tier(s: float) -> tuple[str, str]:
-    if s >= 80: return "CRITICAL", "TERMINATE"
-    if s >= 60: return "HIGH",     "BLOCK"
-    if s >= 40: return "MEDIUM",   "THROTTLE"
-    if s >= 20: return "LOW",      "ALERT"
-    return "NONE", "NONE"
+    def _tier(self, s: float) -> tuple[str, str]:
+        for key, confidence, mitigation in _TIER_LABELS:
+            if s >= self.tier_bounds[key]:
+                return confidence, mitigation
+        return "NONE", "NONE"

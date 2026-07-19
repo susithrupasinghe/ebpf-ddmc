@@ -37,6 +37,53 @@ detection:
   # Minimum seconds a process must exist before being scored
   min_age_seconds: 10
 
+  # Hard-evidence score floors -- a confirmed signal here overrides a lower
+  # weighted-sum score rather than being diluted by other low-scoring features
+  pool_floor: 50         # confirmed stratum pool connection -> never below MEDIUM
+  scratchpad_floor: 45   # RandomX scratchpad signature + high CPU -> never below MEDIUM
+
+  # Known-benign processes exempted from scoring entirely. Some legitimate
+  # multi-threaded dev tools (Node/Bun/Electron-based apps under sustained
+  # CPU load) can otherwise trip the same futex/thread-saturation signals as
+  # a real miner. Machine-specific entries belong in local.yaml, not here.
+  #
+  # allowlist_binaries: {path, sha256} pairs. Path alone is not trusted --
+  # every match re-hashes /proc/<pid>/exe and compares; a path match with a
+  # DIFFERENT hash is treated as a tamper signal, not silently allowlisted
+  # (an allowlisted binary's content changing is a classic supply-chain-
+  # compromise pattern, e.g. malware overwriting a trusted, user-writable
+  # binary). Every thread of a process shares the same exe path, so this
+  # correctly exempts a whole multi-threaded app even though its worker
+  # threads each report a different `comm` (e.g. "Bun Pool 0", "HeapHelper").
+  # POST /api/config/detection {"allowlist_paths": [...]} hashes and adds
+  # entries for you rather than requiring a hash be computed by hand.
+  allowlist_binaries: []
+
+  # allowlist_comm: process/thread name match. Weaker than allowlist_binaries
+  # -- trivially spoofable (a miner can rename its own binary to match), it
+  # only matches the exact `comm` string so it won't cover a multi-threaded
+  # app's *other* worker threads, and it has no hash-pinning equivalent since
+  # a process name isn't a file to hash. Offered for convenience only.
+  allowlist_comm: []
+
+  # Per-feature scoring weights. Any key omitted here falls back to the
+  # built-in default in daemon/detector/scorer.py -- you only need to list
+  # the weights you want to change, not all of them.
+  weights:
+    futex_strong: 18          # futex_ratio >= 0.40
+    futex_moderate: 9         # futex_ratio >= 0.20
+    compute_pure: 10          # io_ratio < 0.02 AND cpu > 70%
+    thread_full_sat: 12       # thread_count >= cpu_count
+    thread_partial_sat: 6     # thread_count >= 0.6 x cpu_count
+    cpu_high: 6               # cpu_percent >= 85%
+    scratchpad_exact: 15      # RandomX scratchpad allocation(s) present
+    huge_pages: 5             # MAP_HUGETLB requested
+    cpu_bound_strong: 12      # involuntary preemption ratio >= 0.92
+    cpu_bound_moderate: 6     # involuntary preemption ratio >= 0.75
+    sustained_medium: 7       # suspicious for >= 3 consecutive scan windows
+    sustained_high: 14        # suspicious for >= 6 consecutive scan windows
+    pool_connection: 40       # confirmed stratum port TCP connection
+
 mitigation:
   # If false: suspend only, operator must confirm kill
   auto_kill: false
@@ -81,3 +128,14 @@ fingerprint_registry:
   # Confirmation gate: minimum continuous seconds at CRITICAL before a
   # fingerprint may be packaged and submitted
   sustained_critical_seconds: 60
+
+  # Separate opt-in: sync the registry's admin-confirmed allowlist (known-
+  # good binary hashes -- see detection.allowlist_binaries) to reduce false
+  # positives fleet-wide. Independent of `enabled` above, which governs the
+  # miner-fingerprint (detection-acceleration) channel -- both share
+  # registry_url, but a node can use one channel without the other.
+  # Unlike the fingerprint channel, this one has NO auto-confirm mode at
+  # all: every submission (via `eddmc allowlist submit`) sits pending until
+  # a registry admin explicitly confirms it, since a poisoned allowlist
+  # entry would make every syncing node blind to that exact binary.
+  sync_allowlist: false

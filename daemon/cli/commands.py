@@ -11,6 +11,11 @@ Usage:
   eddmc revoke <pid>       (lift mitigations)
   eddmc kill <pid>         (manually terminate)
   eddmc config             (show running config)
+  eddmc allowlist submit <path> [--description TEXT]
+                           (hash a binary and submit it to the registry's
+                           shared allowlist -- stays "pending" until an
+                           admin confirms it via the registry API; never
+                           takes effect just from submitting)
 """
 
 import argparse
@@ -43,6 +48,19 @@ def _post(path: str) -> dict:
         c = http.client.HTTPConnection("localhost")
         c.sock = _unix_sock()
         c.request("POST", path, body=b"", headers={"Content-Length": "0"})
+        r = c.getresponse()
+        return json.loads(r.read())
+    except Exception:
+        print("Cannot connect to EDDMC daemon.", file=sys.stderr)
+        sys.exit(1)
+
+
+def _post_json(path: str, body: dict) -> dict:
+    try:
+        data = json.dumps(body).encode()
+        c = http.client.HTTPConnection("localhost")
+        c.sock = _unix_sock()
+        c.request("POST", path, body=data, headers={"Content-Type": "application/json"})
         r = c.getresponse()
         return json.loads(r.read())
     except Exception:
@@ -123,6 +141,21 @@ def cmd_kill(args):
         print(f"Failed: {resp}")
 
 
+def cmd_allowlist(args):
+    if args.allowlist_command != "submit":
+        print("Usage: eddmc allowlist submit <path> [--description TEXT]", file=sys.stderr)
+        sys.exit(1)
+    resp = _post_json("/api/allowlist/submit", {
+        "path": args.path, "description": args.description,
+    })
+    if resp.get("error"):
+        print(f"Failed: {resp['error']}", file=sys.stderr)
+        sys.exit(1)
+    print(f"Submitted {args.path}")
+    print(f"  sha256: {resp['sha256']}")
+    print(f"  status: {resp['status']}  (a registry admin must confirm it before it takes effect anywhere)")
+
+
 def cmd_config(_args):
     cfg = _get("/api/config")
     print(json.dumps(cfg, indent=2))
@@ -146,14 +179,23 @@ def main():
     p_kill = sub.add_parser("kill", help="Manually terminate a PID")
     p_kill.add_argument("pid", type=int)
 
+    p_allowlist = sub.add_parser("allowlist", help="Manage the process allowlist")
+    allowlist_sub = p_allowlist.add_subparsers(dest="allowlist_command")
+    p_allowlist_submit = allowlist_sub.add_parser(
+        "submit", help="Submit a binary to the shared registry allowlist (pending admin review)"
+    )
+    p_allowlist_submit.add_argument("path", help="Path to the binary to hash and submit")
+    p_allowlist_submit.add_argument("--description", default="", help="Human-readable description")
+
     args = parser.parse_args()
     dispatch = {
-        "status":  cmd_status,
-        "watch":   cmd_watch,
-        "alerts":  cmd_alerts,
-        "revoke":  cmd_revoke,
-        "kill":    cmd_kill,
-        "config":  cmd_config,
+        "status":    cmd_status,
+        "watch":     cmd_watch,
+        "alerts":    cmd_alerts,
+        "revoke":    cmd_revoke,
+        "kill":      cmd_kill,
+        "config":    cmd_config,
+        "allowlist": cmd_allowlist,
     }
 
     if args.command not in dispatch:

@@ -92,11 +92,16 @@ class MitigationPolicy:
         self._applied.add(pid)
 
     def revoke(self, pid: int):
-        """Undo mitigations if a process is later deemed benign."""
-        if pid not in self._applied:
-            return
-        throttler.unthrottle(pid)
+        """
+        Undo mitigations if a process is later deemed benign.
+        Deliberately does not gate on self._applied -- that's an in-memory
+        set that resets on every daemon restart, while the actual cgroup/
+        iptables state is on disk and can outlive it (e.g. a mitigation
+        applied before a restart). unthrottle()/unblock()/resume() are all
+        already safe to call for a pid that was never mitigated.
+        """
         blocker.unblock(pid)
+        throttler.unthrottle(pid)
         suspender.resume(pid)
         self._applied.discard(pid)
         logger.info("[REVOKE] pid=%d mitigations lifted", pid)

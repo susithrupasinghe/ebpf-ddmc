@@ -45,8 +45,12 @@ class _Handler(BaseHTTPRequestHandler):
     detections:    list           = []
     alerts:        list           = []
     config:        dict           = {}
-    revoke_cb:     Callable       = lambda pid: None
-    kill_cb:       Callable       = lambda pid: None
+    # staticmethod() ensures these callables aren't auto-bound with `self` as
+    # an implicit first argument when accessed via `self.revoke_cb(...)` etc.
+    revoke_cb:     Callable       = staticmethod(lambda pid: None)
+    kill_cb:       Callable       = staticmethod(lambda pid: None)
+    update_detection_cb: Callable = staticmethod(lambda new_values: {})
+    submit_allowlist_cb: Callable = staticmethod(lambda path, description: {})
 
     # ── Boilerplate overrides for Unix socket ──────────────────────────────
     def address_string(self):
@@ -125,6 +129,36 @@ class _Handler(BaseHTTPRequestHandler):
             except (ValueError, IndexError):
                 self._json({"error": "bad pid"}, 400)
 
+        elif len(parts) == 3 and parts[1] == "config" and parts[2] == "detection":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length)) if length else {}
+            except (ValueError, json.JSONDecodeError):
+                self._json({"error": "invalid JSON body"}, 400)
+                return
+            try:
+                updated = self.update_detection_cb(body)
+                self._json({"ok": True, "detection": updated})
+            except Exception as exc:
+                self._json({"error": str(exc)}, 400)
+
+        elif len(parts) == 3 and parts[1] == "allowlist" and parts[2] == "submit":
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length)) if length else {}
+            except (ValueError, json.JSONDecodeError):
+                self._json({"error": "invalid JSON body"}, 400)
+                return
+            path = body.get("path")
+            if not path:
+                self._json({"error": "'path' is required"}, 400)
+                return
+            try:
+                result = self.submit_allowlist_cb(path, body.get("description"))
+                self._json({"ok": True, **result})
+            except Exception as exc:
+                self._json({"error": str(exc)}, 400)
+
         else:
             self._json({"error": "not found"}, 404)
 
@@ -154,6 +188,8 @@ class UnixSocketServer:
         config:        dict,
         revoke_cb:     Callable,
         kill_cb:       Callable,
+        update_detection_cb: Callable = lambda new_values: {},
+        submit_allowlist_cb: Callable = lambda path, description: {},
     ):
         # Remove stale socket from previous run
         if os.path.exists(socket_path):
@@ -164,8 +200,14 @@ class UnixSocketServer:
         _Handler.detections    = detections
         _Handler.alerts        = alerts
         _Handler.config        = config
-        _Handler.revoke_cb     = revoke_cb
-        _Handler.kill_cb       = kill_cb
+        # staticmethod() is required here: a plain function assigned as a class
+        # attribute is a descriptor, so `self.revoke_cb(pid)` would silently
+        # auto-bind `self` as the first argument (`revoke_cb(self, pid)`),
+        # breaking every callback with a "too many positional arguments" error.
+        _Handler.revoke_cb     = staticmethod(revoke_cb)
+        _Handler.kill_cb       = staticmethod(kill_cb)
+        _Handler.update_detection_cb = staticmethod(update_detection_cb)
+        _Handler.submit_allowlist_cb = staticmethod(submit_allowlist_cb)
 
         self._server      = _UnixHTTPServer(socket_path, _Handler)
         self._socket_path = socket_path

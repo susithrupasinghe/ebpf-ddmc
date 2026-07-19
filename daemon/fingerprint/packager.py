@@ -71,7 +71,7 @@ def binary_hash(pid: int) -> Optional[str]:
         return None
 
 
-def _node_id() -> str:
+def node_id() -> str:
     """One-way hash of the hostname -- the registry never learns which
     physical host submitted a fingerprint."""
     return hashlib.sha256(socket.gethostname().encode()).hexdigest()
@@ -85,7 +85,7 @@ def package(fp: BehaviouralFingerprint, evidence: dict) -> dict:
 
     return {
         "fingerprint_id": fingerprint_id,
-        "node_id": _node_id(),
+        "node_id": node_id(),
         "submitted_at": time.time(),
         "eddmc_version": EDDMC_VERSION,
         "kernel_version": _kernel_version(),

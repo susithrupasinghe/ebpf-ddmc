@@ -12,28 +12,32 @@ Must be run as root (required for eBPF + cgroups + iptables).
 """
 
 import argparse
+import json
 import logging
 import os
 import signal
 import sys
 import threading
 import time
+import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from daemon.config.config                 import load as load_config
+from daemon.config.config                 import load as load_config, save_local_override, deep_merge
 from daemon.collector.syscall_collector   import SyscallCollector
 from daemon.collector.sched_collector     import SchedCollector
 from daemon.collector.net_collector       import NetCollector
 from daemon.collector.mem_collector       import MemCollector
-from daemon.detector.engine               import DetectionEngine
+from daemon.detector.scorer               import Scorer
+from daemon.detector.engine               import DetectionEngine, sha256_file
 from daemon.mitigator.policy              import MitigationPolicy
 from daemon.alerts.alerter                import AlertBus  # JSONL file log
 from daemon.ipc.socket_server             import UnixSocketServer
 from daemon.fingerprint.assessor          import FingerprintAssessor
-from daemon.fingerprint.packager          import package as package_fingerprint
+from daemon.fingerprint.packager          import package as package_fingerprint, node_id
 from daemon.fingerprint.submitter         import FingerprintSubmitter
 from daemon.fingerprint.matcher           import FingerprintMatcher
+from daemon.fingerprint.allowlist_sync    import AllowlistSync
 
 
 def setup_logging(level: str, log_file: str | None):
@@ -109,6 +113,44 @@ class EDDMCDaemon:
             matcher.start()
             logger.info("Fingerprint registry enabled: %s", fp_cfg["registry_url"])
 
+        # Separate opt-in: syncing the registry's admin-confirmed allowlist
+        # (false positives reduction) is independent of the miner-fingerprint
+        # channel above (detection acceleration) -- an operator may want one
+        # without the other -- though both use the same registry_url.
+        allowlist_sync = None
+        if fp_cfg.get("sync_allowlist", False):
+            registry_url = fp_cfg.get("registry_url")
+            if not registry_url:
+                logger.error("fingerprint_registry.sync_allowlist is true but registry_url is not set")
+            else:
+                allowlist_sync = AllowlistSync(
+                    registry_url=registry_url,
+                    refresh_interval_hours=fp_cfg.get("refresh_interval_hours", 1),
+                )
+                allowlist_sync.start()
+                logger.info("Registry allowlist sync enabled: %s", registry_url)
+
+        def submit_allowlist_to_registry(path: str, description: str) -> dict:
+            """Admin action (via `eddmc allowlist submit`) -- never automatic."""
+            registry_url = fp_cfg.get("registry_url")
+            if not registry_url:
+                raise ValueError("fingerprint_registry.registry_url is not configured")
+            digest = sha256_file(path)
+            if digest is None:
+                raise ValueError(f"cannot read {path}")
+            body = json.dumps({
+                "sha256": digest, "description": description, "node_id": node_id(),
+            }).encode()
+            req = urllib.request.Request(
+                registry_url.rstrip("/") + "/api/v1/allowlist",
+                data=body, method="POST",
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                result = json.loads(resp.read())
+            logger.info("Submitted %s (%s) to registry allowlist: %s", path, digest[:12], result.get("status"))
+            return {**result, "sha256": digest, "path": path}
+
         def on_detection(result):
             self._detections.append({
                 "pid":        result.pid,
@@ -156,13 +198,64 @@ class EDDMCDaemon:
         logger.info("All eBPF collectors running")
 
         # ── Detection engine ───────────────────────────────────────────────
+        scorer = Scorer(cfg.get("detection"))
+
+        def update_detection_config(new_values: dict) -> dict:
+            """
+            Live-retune scoring weights/floors/tier-thresholds/allowlist (e.g.
+            from the UI's config panel) with no daemon restart, and persist
+            to local.yaml so it survives one.
+            """
+            new_values = dict(new_values)
+
+            # Convenience: accept plain paths and hash-pin them at add time
+            # ("trust on first use") rather than requiring the caller to
+            # compute a SHA-256 themselves. Merges with any existing
+            # allowlist_binaries entries instead of clobbering them.
+            if "allowlist_paths" in new_values:
+                by_path = {
+                    e["path"]: e
+                    for e in cfg.get("detection", {}).get("allowlist_binaries", [])
+                }
+                for path in new_values.pop("allowlist_paths"):
+                    digest = sha256_file(path)
+                    if digest is None:
+                        raise ValueError(f"cannot read {path} to hash it")
+                    by_path[path] = {"path": path, "sha256": digest}
+                new_values["allowlist_binaries"] = list(by_path.values())
+
+            cfg["detection"] = deep_merge(cfg.get("detection", {}), new_values)
+            scorer.update(cfg["detection"])
+            save_local_override("detection", cfg["detection"])
+            logger.info("Detection config updated live: %s", new_values)
+            return cfg["detection"]
+
+        def on_allowlist_tamper(pid: int, path: str, expected: str, actual: str):
+            logger.error(
+                "[TAMPER] pid=%d exe=%s hash mismatch (expected=%s actual=%s) -- "
+                "an allowlisted binary's content changed since it was trusted; "
+                "no longer exempting it from scoring",
+                pid, path, expected[:12], (actual or "unreadable")[:12],
+            )
+            on_alert({
+                "pid": pid, "comm": "",
+                "score": 100.0, "confidence": "CRITICAL", "action": "TAMPER_DETECTED",
+                "reasons": [f"allowlisted binary {path} hash changed: expected {expected[:12]}, got {(actual or 'unreadable')[:12]}"],
+                "timestamp": time.time(),
+            })
+
         engine = DetectionEngine(
             process_store=self._store,
             lock=self._lock,
             on_detection=on_detection,
             on_mitigation=on_mitigation,
+            scorer=scorer,
             interval_s=cfg["daemon"]["scan_interval"],
             fingerprint_matcher=matcher,
+            on_process_gone=lambda pid: policy.revoke(pid),
+            get_detection_cfg=lambda: cfg.get("detection", {}),
+            on_allowlist_tamper=on_allowlist_tamper,
+            allowlist_sync=allowlist_sync,
         )
         engine.start()
 
@@ -177,6 +270,8 @@ class EDDMCDaemon:
             config=cfg,
             revoke_cb=lambda pid: policy.revoke(pid),
             kill_cb=lambda pid: terminate(pid),
+            update_detection_cb=update_detection_config,
+            submit_allowlist_cb=submit_allowlist_to_registry,
         )
         ipc.start()
         logger.info("IPC server: %s", cfg["daemon"]["socket_path"])
@@ -202,6 +297,8 @@ class EDDMCDaemon:
             c.stop()
         if matcher is not None:
             matcher.stop()
+        if allowlist_sync is not None:
+            allowlist_sync.stop()
         alert_bus.stop()
         ipc.stop()
         logger.info("EDDMC stopped.")
