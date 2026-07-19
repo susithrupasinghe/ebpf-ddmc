@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(journalctl -u eddmc --no-pager -n 5)",
+      "Bash(journalctl --no-pager --since \"15:58:35\")",
+      "Bash(python3 daemon/cli/commands.py allowlist submit \"/tmp/claude-1000/-home-susith-Desktop-Research-impl-final-ebpf-ddmc/19c8b01b-8478-41ce-9c82-b4020ac8239e/scratchpad/dummy_test_binary\" --description \"test binary for registry allowlist e2e test\")",
+      "Bash(python3 daemon/cli/commands.py allowlist submit \"/tmp/claude-1000/-home-susith-Desktop-Research-impl-final-ebpf-ddmc/19c8b01b-8478-41ce-9c82-b4020ac8239e/scratchpad/dummy_test_binary\" --description \"cpu-intensive test binary v2\")",
+      "Bash(/tmp/claude-1000/-home-susith-Desktop-Research-impl-final-ebpf-ddmc/19c8b01b-8478-41ce-9c82-b4020ac8239e/scratchpad/dummy_test_binary)"
+    ]
+  }
+}

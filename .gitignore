@@ -13,11 +13,13 @@ __pycache__/
 # Runtime
 *.pid
 *.sock
+daemon/config/local.yaml
+registry/registry.db
 
 # Node / Electron
-ui/node_modules/
-ui/dist/
-ui/.cache/
+client-app/node_modules/
+client-app/renderer/dist/
+client-app/.cache/
 
 # Build artifacts
 dist/
