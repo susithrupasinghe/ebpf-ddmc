@@ -114,3 +114,18 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
 
     return 0;
 }
+
+/*
+ * syscall_stats is keyed by TGID -- only clean up on the thread-group
+ * leader's exit (see mem_monitor.c for why). Without this, the fixed-size
+ * map never shrinks and eventually fills permanently on a long-running host.
+ */
+TRACEPOINT_PROBE(sched, sched_process_exit) {
+    u64 id  = bpf_get_current_pid_tgid();
+    u32 pid = id >> 32;
+    u32 tid = id;
+    if (pid == tid) {
+        syscall_stats.delete(&pid);
+    }
+    return 0;
+}

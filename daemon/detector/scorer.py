@@ -19,8 +19,27 @@ Design principles
 3. HARD EVIDENCE ESCALATION
    Some signals are near-conclusive regardless of other features:
    - Pool connection (stratum port) → score floor at 50
-   - RandomX scratchpad (N × 2MB) + high CPU → score floor at 45
-   These cannot be offset by low scores elsewhere.
+   - RandomX scratchpad (N × 2MB) *co-occurring with MAP_HUGETLB on the same
+     allocation*, process still alive/active → score floor at 45
+   These cannot be offset by low scores elsewhere. Note the scratchpad floor
+   requires the *joint* size-and-hugepage match, not size alone: a bare
+   exact-2MB-multiple allocation is not floor-eligible, since 2MB is also
+   the standard Linux transparent-huge-page size and legitimate software
+   that merely aligns to it (observed in practice: fwupd, Chromium/
+   Electron's allocator) would otherwise floor the score too. Real RandomX
+   requests huge pages *for* its scratchpad specifically; that combination
+   is what makes the signal near-conclusive, not the size in isolation.
+   The floor's CPU-activity check is deliberately a low bar (>=1%), not a
+   high one -- it only excludes a fully idle/dead entry, since EDDMC's own
+   mitigation (cgroup CPU quotas as low as 5%) would otherwise suppress the
+   floor for a process it is *actively and successfully* throttling.
+
+4. CPU-GATED SYSCALL SIGNALS
+   futex ratio is only credited when the process is also CPU-intensive
+   (>=50%) in the same window. High futex ratio alone is common in any
+   lock/condvar-heavy multithreaded runtime (V8, Chromium's Mojo IPC, the
+   JVM) even while mostly idle; a real miner's futex traffic is a barrier
+   between hash rounds on threads that are simultaneously CPU-saturated.
 
 Score tiers
 -----------
@@ -58,9 +77,10 @@ DEFAULT_WEIGHTS = {
     "thread_partial_sat":   6,   # thread_count >= 0.6 × cpu_count
     "cpu_high":             6,   # cpu_percent >= 85%
 
-    # Memory dimension (max 20)
-    "scratchpad_exact":    15,   # N × 2MB allocs > 0  (RandomX signature)
-    "huge_pages":           5,   # MAP_HUGETLB requested
+    # Memory dimension (max 23)
+    "scratchpad_exact":    15,   # N × 2MB allocs AND MAP_HUGETLB on the SAME allocation (strong RandomX signature)
+    "scratchpad_weak":      3,   # N × 2MB allocs alone, no huge-page flag (weak -- widely shared with non-mining allocators, see scorer docstring)
+    "huge_pages":           5,   # MAP_HUGETLB requested (any size, not necessarily scratchpad-sized)
 
     # Scheduler dimension (max 16)
     "cpu_bound_strong":    12,   # involuntary_ratio >= 0.92
@@ -145,12 +165,20 @@ class Scorer:
         net   = fp.network
 
         # ── 1. Syscall fingerprint ─────────────────────────────────────────
-        if sc.futex_ratio >= 0.40:
+        # Futex dominance is gated on simultaneous CPU intensity. High futex
+        # ratio alone is shared with any lock/condvar-heavy multithreaded
+        # runtime (V8, Chromium's Mojo IPC, the JVM) even while doing almost
+        # nothing -- observed in practice: an EDDMC Electron renderer sat at
+        # 0.5% CPU yet still showed 51% futex ratio. A real miner's futex
+        # traffic is a barrier between hash rounds on threads that are
+        # simultaneously CPU-saturated, so requiring both together targets
+        # the actual mining pattern instead of futex volume in isolation.
+        if sc.futex_ratio >= 0.40 and par.cpu_percent >= 50.0:
             s += W["futex_strong"]
-            reasons.append(f"futex dominance {sc.futex_ratio:.0%} of all syscalls (strong mining signal)")
-        elif sc.futex_ratio >= 0.20:
+            reasons.append(f"futex dominance {sc.futex_ratio:.0%} of all syscalls at {par.cpu_percent:.0f}% CPU (strong mining signal)")
+        elif sc.futex_ratio >= 0.20 and par.cpu_percent >= 50.0:
             s += W["futex_moderate"]
-            reasons.append(f"elevated futex ratio {sc.futex_ratio:.0%}")
+            reasons.append(f"elevated futex ratio {sc.futex_ratio:.0%} at {par.cpu_percent:.0f}% CPU")
 
         if sc.io_ratio < 0.02 and par.cpu_percent >= 70.0:
             s += W["compute_pure"]
@@ -177,11 +205,23 @@ class Scorer:
             reasons.append(f"sustained CPU {par.cpu_percent:.0f}%")
 
         # ── 3. Memory fingerprint (RandomX-specific) ────────────────────────
-        if mem.scratchpad_allocs > 0:
+        # Strong signal requires the JOINT match (scratchpad-sized AND
+        # huge-page-backed on the same allocation) -- a bare size match is
+        # scored much lower and never floor-eligible, since size alone is
+        # shared with ordinary huge-page-aligned allocators (fwupd,
+        # Chromium/Electron) that have nothing to do with RandomX.
+        if mem.scratchpad_huge_allocs > 0:
             s += W["scratchpad_exact"]
             reasons.append(
-                f"RandomX signature: {mem.scratchpad_allocs} × 2MB scratchpad allocation(s) "
-                f"({mem.scratchpad_mb:.0f} MB total)"
+                f"RandomX signature: {mem.scratchpad_huge_allocs} × 2MB scratchpad "
+                f"allocation(s) backed by huge pages ({mem.scratchpad_mb:.0f} MB total) "
+                f"— strong evidence"
+            )
+        elif mem.scratchpad_allocs > 0:
+            s += W["scratchpad_weak"]
+            reasons.append(
+                f"{mem.scratchpad_allocs} × 2MB-aligned allocation(s) with no huge-page "
+                f"flag — weak signal, commonly shared with non-mining allocators"
             )
         if mem.huge_page_requests > 0:
             s += W["huge_pages"]
@@ -222,7 +262,20 @@ class Scorer:
         # ── Apply hard-evidence floors ────────────────────────────────────────
         if net.pool_connections > 0:
             s = max(s, self.pool_floor)
-        if mem.scratchpad_allocs > 0 and par.cpu_percent >= 70.0:
+        # Floor requires the STRONG (joint scratchpad+hugepage) signal --
+        # see the class docstring for why size alone is not floor-eligible.
+        # The accompanying CPU-activity check only needs to rule out a fully
+        # idle/dead process (not yet pruned) -- it must NOT require a high
+        # percentage like the other CPU gates in this method. A confirmed
+        # miner that EDDMC has already throttled to a 30%/10%/5% cgroup quota
+        # (see mitigation.throttle_quotas) will legitimately report a low
+        # cpu_percent on the next scan purely because the mitigation worked;
+        # gating the floor on a high threshold turned successful mitigation
+        # into evidence the process was no longer suspicious, which caused
+        # the confidence tier to flap MEDIUM -> LOW -> MEDIUM every cycle
+        # (observed directly: a live XMRig instance oscillated 45/MEDIUM ->
+        # 39/LOW within one scan interval while mining continuously).
+        if mem.scratchpad_huge_allocs > 0 and par.cpu_percent >= 1.0:
             s = max(s, self.scratchpad_floor)
 
         # ── Temporal penalty for young processes ─────────────────────────────

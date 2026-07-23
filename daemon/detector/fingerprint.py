@@ -71,11 +71,12 @@ class ParallelismProfile:
 
 @dataclass
 class MemoryProfile:
-    scratchpad_allocs:    int   = 0     # N × 2MB anon-private mappings
-    total_anon_mb:        float = 0.0   # total MB of anon-private mappings
-    huge_page_requests:   int   = 0
-    working_set_stable:   bool  = False # True after 30s with no new large allocs
-    scratchpad_mb:        float = 0.0   # scratchpad_allocs × 2
+    scratchpad_allocs:      int   = 0   # N x 2MB anon-private mappings (size match alone -- weak, see scratchpad_huge_allocs)
+    scratchpad_huge_allocs: int   = 0   # size match AND MAP_HUGETLB together -- the strong RandomX signal
+    total_anon_mb:          float = 0.0 # total MB of anon-private mappings
+    huge_page_requests:     int   = 0
+    working_set_stable:     bool  = False # True after 30s with no new large allocs
+    scratchpad_mb:          float = 0.0 # scratchpad_allocs × 2
 
 
 @dataclass
@@ -150,13 +151,15 @@ def build(pid: int, proc_data: dict, temporal: TemporalProfile) -> BehaviouralFi
     )
 
     # ── Memory profile ─────────────────────────────────────────────────────
-    scratchpad_allocs = mem.get("scratchpad_allocs", 0)
-    total_anon_bytes  = mem.get("total_mmap_bytes", 0)
+    scratchpad_allocs      = mem.get("scratchpad_allocs", 0)
+    scratchpad_huge_allocs = mem.get("scratchpad_huge_allocs", 0)
+    total_anon_bytes       = mem.get("total_mmap_bytes", 0)
     memory_p = MemoryProfile(
-        scratchpad_allocs  = scratchpad_allocs,
-        total_anon_mb      = total_anon_bytes / (1024 * 1024),
-        huge_page_requests = mem.get("huge_page_requests", 0),
-        scratchpad_mb      = scratchpad_allocs * 2.0,
+        scratchpad_allocs      = scratchpad_allocs,
+        scratchpad_huge_allocs = scratchpad_huge_allocs,
+        total_anon_mb          = total_anon_bytes / (1024 * 1024),
+        huge_page_requests     = mem.get("huge_page_requests", 0),
+        scratchpad_mb          = scratchpad_allocs * 2.0,
         # Stable if scratchpad was allocated and no new large allocs in last window
         working_set_stable = (scratchpad_allocs > 0
                               and temporal.age_seconds > 30

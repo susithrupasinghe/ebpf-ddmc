@@ -98,6 +98,18 @@ TRACEPOINT_PROBE(sched, sched_process_exit) {
     struct sched_stats *s = sched_stats.lookup(&pid);
     if (s && s->thread_count > 0) s->thread_count--;
 
+    /*
+     * sched_stats is keyed by raw TID here (sched_switch populates it via
+     * next_pid/prev_pid, one entry per thread) -- the decrement above only
+     * touches the thread-group leader's own entry's counter, it never
+     * removes the EXITING thread's own entry. Without this delete, every
+     * thread that ever ran leaves a permanent entry: the fixed-size map
+     * (BCC has no dynamic resize) fills up for good on any long-running
+     * host with normal thread churn, after which new PIDs silently stop
+     * being tracked (map.update() fails quietly, no error surfaced).
+     */
+    sched_stats.delete(&tid);
+
     struct thread_event ev = {};
     ev.tgid = pid;
     ev.tid  = tid;

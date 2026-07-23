@@ -5,8 +5,21 @@
  *
  * RandomX (used by XMRig and most modern CPU miners) allocates exactly
  * N × 2,097,152 bytes (N × 2MB) of MAP_PRIVATE | MAP_ANONYMOUS memory
- * at startup — one 2MB scratchpad per mining thread.  This is one of the
- * most specific and stable behavioural signatures for CPU cryptomining.
+ * at startup — one 2MB scratchpad per mining thread. RandomX also
+ * explicitly requests MAP_HUGETLB for this allocation when huge pages are
+ * available on the host.
+ *
+ * An exact-2MB-multiple size ALONE is not a specific signal: 2MB is also
+ * the standard Linux transparent-huge-page size, so any software that
+ * aligns large buffers to huge-page boundaries for ordinary, mining-unrelated
+ * performance reasons (observed in practice: fwupd, and Chromium/Electron's
+ * allocator) coincidentally matches it too. What legitimate allocators
+ * essentially never do is request MAP_HUGETLB *at the same time* as sizing
+ * the allocation to an exact scratchpad multiple -- that specific
+ * combination is what we track as the strong signal
+ * (scratchpad_huge_allocs). A bare size match with no huge-page flag is
+ * tracked separately (scratchpad_allocs) and treated as much weaker
+ * evidence by the scorer.
  *
  * We also track mprotect() on large regions, which miners call to mark
  * scratchpads PROT_READ|PROT_WRITE after allocation.
@@ -30,8 +43,9 @@
 
 struct mem_stats {
     u64 total_mmap_bytes;         /* all anonymous private mappings */
-    u64 scratchpad_allocs;        /* allocations that are exact N×2MB */
-    u64 huge_page_requests;       /* MAP_HUGETLB requests */
+    u64 scratchpad_allocs;        /* size-only match: exact N×2MB (weak alone) */
+    u64 scratchpad_huge_allocs;   /* STRONG signal: exact N×2MB AND MAP_HUGETLB together */
+    u64 huge_page_requests;       /* MAP_HUGETLB requests, any size */
     u64 large_alloc_count;        /* allocations >= 1MB */
     u64 mprotect_large;           /* mprotect on regions >= 1MB */
 };
@@ -42,6 +56,7 @@ struct mem_event {
     u64 flags;
     u8  is_scratchpad;            /* 1 = exact multiple of 2MB */
     u8  is_huge;                  /* 1 = MAP_HUGETLB requested */
+    u8  is_scratchpad_huge;       /* 1 = both of the above, same allocation */
     u64 timestamp_ns;
     char comm[TASK_COMM_LEN];
 };
@@ -74,7 +89,8 @@ TRACEPOINT_PROBE(syscalls, sys_enter_mmap) {
     if (len >= 1048576) ms->large_alloc_count++;
 
     u8 is_scratchpad = 0;
-    /* Exact multiple of 2MB → RandomX scratchpad */
+    /* Exact multiple of 2MB → matches RandomX scratchpad size, but this
+     * alone is not specific (see file header) */
     if (len >= SCRATCHPAD_SIZE && (len % SCRATCHPAD_SIZE) == 0) {
         ms->scratchpad_allocs++;
         is_scratchpad = 1;
@@ -83,15 +99,20 @@ TRACEPOINT_PROBE(syscalls, sys_enter_mmap) {
     u8 is_huge = (flags & MAP_HUGETLB) ? 1 : 0;
     if (is_huge) ms->huge_page_requests++;
 
+    /* STRONG signal: scratchpad-sized AND huge-page-backed, same allocation */
+    u8 is_scratchpad_huge = (is_scratchpad && is_huge) ? 1 : 0;
+    if (is_scratchpad_huge) ms->scratchpad_huge_allocs++;
+
     /* Only emit events for large or noteworthy allocations */
     if (len >= 1048576 || is_scratchpad) {
         struct mem_event ev = {};
-        ev.pid           = pid;
-        ev.length        = len;
-        ev.flags         = flags;
-        ev.is_scratchpad = is_scratchpad;
-        ev.is_huge       = is_huge;
-        ev.timestamp_ns  = bpf_ktime_get_ns();
+        ev.pid                = pid;
+        ev.length             = len;
+        ev.flags              = flags;
+        ev.is_scratchpad      = is_scratchpad;
+        ev.is_scratchpad_huge = is_scratchpad_huge;
+        ev.is_huge            = is_huge;
+        ev.timestamp_ns       = bpf_ktime_get_ns();
         bpf_get_current_comm(&ev.comm, sizeof(ev.comm));
         mem_events.perf_submit(args, &ev, sizeof(ev));
     }
@@ -114,5 +135,25 @@ TRACEPOINT_PROBE(syscalls, sys_enter_mprotect) {
     }
     ms->mprotect_large++;
 
+    return 0;
+}
+
+/*
+ * mem_stats is keyed by TGID, so only clean up when the exiting task IS its
+ * own thread-group leader -- otherwise a worker thread exiting early would
+ * wipe live data still being written by sibling threads / the leader.
+ * Without this, the map (fixed at MAX_PIDS entries, BCC has no way to make
+ * it dynamic) fills up permanently on any long-running host with normal
+ * process churn -- once full, update() for new PIDs fails silently (no
+ * error, just silently untracked processes), which is a real reliability
+ * problem for a server deployment that stays up for days/weeks.
+ */
+TRACEPOINT_PROBE(sched, sched_process_exit) {
+    u64 id  = bpf_get_current_pid_tgid();
+    u32 pid = id >> 32;
+    u32 tid = id;
+    if (pid == tid) {
+        mem_stats.delete(&pid);
+    }
     return 0;
 }

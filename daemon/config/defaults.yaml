@@ -76,8 +76,9 @@ detection:
     thread_full_sat: 12       # thread_count >= cpu_count
     thread_partial_sat: 6     # thread_count >= 0.6 x cpu_count
     cpu_high: 6               # cpu_percent >= 85%
-    scratchpad_exact: 15      # RandomX scratchpad allocation(s) present
-    huge_pages: 5             # MAP_HUGETLB requested
+    scratchpad_exact: 15      # 2MB scratchpad-sized alloc AND MAP_HUGETLB together (strong, floor-eligible)
+    scratchpad_weak: 3        # 2MB-sized alloc alone, no huge-page flag (weak, not floor-eligible)
+    huge_pages: 5             # MAP_HUGETLB requested (any size)
     cpu_bound_strong: 12      # involuntary preemption ratio >= 0.92
     cpu_bound_moderate: 6     # involuntary preemption ratio >= 0.75
     sustained_medium: 7       # suspicious for >= 3 consecutive scan windows
