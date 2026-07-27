@@ -1,0 +1,14 @@
+{
+  "name": "eddmc-eval-browser-wasm",
+  "private": true,
+  "type": "commonjs",
+  "description": "EDDMC evaluation: in-browser WASM miner-shaped workload via Puppeteer",
+  "scripts": {
+    "build": "node build_wasm.js",
+    "test": "node puppeteer_test.js"
+  },
+  "dependencies": {
+    "puppeteer": "^23.0.0",
+    "wabt": "^1.0.36"
+  }
+}

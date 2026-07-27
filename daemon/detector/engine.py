@@ -179,7 +179,13 @@ class DetectionEngine:
     def _loop(self):
         while self._running:
             time.sleep(self._interval)
-            self._scan()
+            try:
+                self._scan()
+            except Exception:
+                # Uncaught here would silently kill this daemon thread forever
+                # -- collectors/IPC keep running so nothing else looks wrong,
+                # but no process would ever be scored again until restart.
+                logger.exception("Unhandled error in detection scan -- continuing")
 
     def _scan(self):
         now = time.time()
@@ -299,7 +305,10 @@ class DetectionEngine:
         # being rescored.
         for pid in dead_pids:
             if pid in self._mitigated:
-                self._on_process_gone(pid)
+                try:
+                    self._on_process_gone(pid)
+                except Exception:
+                    logger.exception("Error revoking mitigations for exited pid %d", pid)
             self._mitigated.pop(pid, None)
             self._temporal.pop(pid, None)
             with self._lock:
@@ -310,5 +319,8 @@ class DetectionEngine:
             if pid not in live_pids:
                 del self._temporal[pid]
                 if pid in self._mitigated:
-                    self._on_process_gone(pid)
+                    try:
+                        self._on_process_gone(pid)
+                    except Exception:
+                        logger.exception("Error revoking mitigations for exited pid %d", pid)
                 self._mitigated.pop(pid, None)

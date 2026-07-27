@@ -33,6 +33,15 @@ build/
 *.swp
 *.swo
 
+# Evaluation harness artifacts
+evaluation/results/*.csv
+evaluation/results/*.log
+evaluation/browser_wasm/node_modules/
+evaluation/browser_wasm/wasm_source.wasm
+evaluation/malware_corpus/samples/
+evaluation/malware_corpus/sok/
+evaluation/packed_binary/xmrig_packed*
+
 # OS
 .DS_Store
 Thumbs.db

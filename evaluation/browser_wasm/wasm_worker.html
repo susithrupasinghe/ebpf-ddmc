@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>EDDMC eval — WASM worker load</title></head>
+<body>
+<p id="status">starting workers...</p>
+<script>
+  const n = navigator.hardwareConcurrency || 4;
+  const workers = [];
+  for (let i = 0; i < n; i++) {
+    const w = new Worker("worker.js");
+    w.postMessage("start");
+    workers.push(w);
+  }
+  document.getElementById("status").textContent = `running ${n} WASM workers`;
+  window._eddmcWorkers = workers; // so puppeteer_test.js can terminate them cleanly
+</script>
+</body>
+</html>
