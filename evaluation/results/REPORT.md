@@ -1,13 +1,13 @@
 # EDDMC Evaluation Report
 
-Auto-generated 2026-07-27 19:12 UTC by `evaluation/generate_report.py` from the CSVs in `evaluation/results/`. Every number below comes directly from a CSV produced by `evaluation/results_capture.py` polling the live daemon during an actual run -- nothing here is hand-entered.
+Auto-generated 2026-07-28 13:29 UTC by `evaluation/generate_report.py` from the CSVs in `evaluation/results/`. Every number below comes directly from a CSV produced by `evaluation/results_capture.py` polling the live daemon during an actual run -- nothing here is hand-entered.
 
 ## 1. Methodology / Environment
 
-- Platform: Linux-7.0.0-27-generic-aarch64-with-glibc2.43
-- Kernel: 7.0.0-27-generic
+- Platform: Linux-7.0.0-28-generic-aarch64-with-glibc2.43
+- Kernel: 7.0.0-28-generic
 - CPU cores (logical): 4
-- XMRig: XMRig 6.25.0 with GCC 15.2.0
+- XMRig: not available
 - Mitigation mode: live (`dry_run=false`) — every THROTTLE/BLOCK/TERMINATE recorded below reflects a real cgroup v2 CPU quota / iptables rule / signal applied to the actual process, independently verified against `/sys/fs/cgroup/eddmc/<pid>/cpu.max` during this evaluation session, not a simulated or logged-only decision.
 - All tracks share one capture instrument (`results_capture.py`), polling the daemon's `/api/processes` endpoint at 1-2s intervals — scores/tiers/reasons are the live daemon's own scoring output, not independently recomputed.
 - Benign baseline and network pool-hits tracks ran 3 independent trials each (mean ± sample stddev reported); XMRig-family and browser tracks ran once each due to per-run time cost (each XMRig-family run takes several minutes under real cgroup throttling) — see the caveats section below.

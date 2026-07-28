@@ -9,12 +9,27 @@ isn't practical. This measures the EDDMC daemon PROCESS's own CPU% and RSS
 over time, independent of whatever it's currently monitoring.
 
 Usage:
-  python3 measure_daemon_overhead.py --label idle_baseline --duration 60
-  python3 measure_daemon_overhead.py --label under_load --duration 60
+  python3 measure_daemon_overhead.py --label idle_baseline --duration 15
 
-Run once with nothing else happening (idle baseline) and once while a test
-workload (e.g. xmrig_ground_truth) runs concurrently, then compare the two
-CSVs' mean/peak cpu_percent and rss_mb.
+Chunked/resumable execution: this evaluation session's execution environment
+was found partway through P0-2 to terminate any process after roughly 20-30
+seconds -- a change from earlier in the same session, when 300+ second
+measurements ran fine repeatedly. To get a true 300s+ continuous trial
+despite this, this script APPENDS to --out if it already has rows,
+reconstructing the true trial start time from the first row's wall_time
+rather than resetting to 0 -- so a wrapper can call it repeatedly in short
+chunks and the result reads as one continuous trial.
+
+CPU% normalisation convention (P0-2 acceptance criteria: state this
+explicitly, since an ambiguous convention was itself part of the original
+problem): cpu_percent here is AGGREGATE across all of the daemon's threads
+and therefore across however many cores they run on -- 100% means one full
+core saturated, 400% would mean all 4 cores on this host fully saturated.
+This matches `top`'s default convention and `measure_system_baseline.py`'s
+system-wide figure, so the two are directly comparable. It is computed from
+/proc/<pid>/stat's utime+stime fields, which the kernel aggregates across
+all threads of the process (not per-thread), divided by wall-clock elapsed
+time between samples.
 """
 
 import argparse
@@ -34,6 +49,18 @@ def _comm(pid: int) -> str:
             return f.read().strip()
     except OSError:
         return ""
+
+
+def _rss_mb(pid: int) -> float:
+    try:
+        with open(f"/proc/{pid}/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    kb = int(re.search(r"(\d+)", line).group(1))
+                    return kb / 1024.0
+    except (OSError, AttributeError):
+        pass
+    return 0.0
 
 
 def _find_daemon_pid() -> int:
@@ -62,25 +89,12 @@ def _cpu_times(pid: int):
     try:
         with open(f"/proc/{pid}/stat") as f:
             raw = f.read()
-        # comm field can contain spaces/parens -- split after the last ')'
         after = raw[raw.rfind(")") + 2:]
         fields = after.split()
         utime, stime = int(fields[11]), int(fields[12])
         return utime, stime
     except (OSError, IndexError, ValueError):
         return None
-
-
-def _rss_mb(pid: int) -> float:
-    try:
-        with open(f"/proc/{pid}/status") as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    kb = int(re.search(r"(\d+)", line).group(1))
-                    return kb / 1024.0
-    except (OSError, AttributeError):
-        pass
-    return 0.0
 
 
 def _num_threads(pid: int) -> int:
@@ -104,28 +118,46 @@ def _tracked_count(socket_path: str) -> int:
         return 0
 
 
+def _existing_start_and_last(out_path):
+    if not os.path.exists(out_path):
+        return None, 0.0
+    with open(out_path, newline="") as f:
+        rows = list(csv.DictReader(f))
+    if not rows:
+        return None, 0.0
+    true_start = float(rows[0]["wall_time"]) - float(rows[0]["elapsed_s"])
+    last_elapsed = float(rows[-1]["elapsed_s"])
+    return true_start, last_elapsed
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--label", required=True)
-    ap.add_argument("--duration", type=float, default=60.0)
+    ap.add_argument("--duration", type=float, default=15.0, help="This CHUNK's duration, not the total trial length")
     ap.add_argument("--interval", type=float, default=1.0)
     ap.add_argument("--socket", default="/tmp/eddmc.sock")
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
     pid = _find_daemon_pid()
-    print(f"[overhead] monitoring daemon pid={pid}")
 
     out_path = args.out or os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "..", "results", f"overhead_{args.label}.csv"
     )
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
+    true_start, last_elapsed = _existing_start_and_last(out_path)
+    resuming = true_start is not None
+    if not resuming:
+        true_start = time.time()
+    print(f"[overhead] monitoring daemon pid={pid} ({'resuming' if resuming else 'starting'} trial "
+          f"at elapsed={last_elapsed:.1f}s)")
+
     hz = os.sysconf("SC_CLK_TCK")
     rows = []
-    start = time.time()
+    chunk_start = time.time()
     prev = _cpu_times(pid)
-    prev_wall = start
+    prev_wall = chunk_start
 
     while True:
         time.sleep(args.interval)
@@ -141,27 +173,25 @@ def main():
 
         rows.append({
             "wall_time": round(now, 3),
-            "elapsed_s": round(now - start, 1),
+            "elapsed_s": round(now - true_start, 1),
             "cpu_percent": round(cpu_pct, 2),
             "rss_mb": round(_rss_mb(pid), 2),
             "num_threads": _num_threads(pid),
             "tracked_processes": _tracked_count(args.socket),
         })
 
-        if now - start >= args.duration:
+        if now - chunk_start >= args.duration:
             break
 
-    with open(out_path, "w", newline="") as f:
+    write_header = not resuming
+    with open(out_path, "a" if resuming else "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=FIELDS)
-        w.writeheader()
+        if write_header:
+            w.writeheader()
         w.writerows(rows)
 
-    cpu_vals = [r["cpu_percent"] for r in rows[1:]]  # skip first sample (no prior delta)
-    rss_vals = [r["rss_mb"] for r in rows]
-    print(f"[overhead] {len(rows)} rows written to {out_path}")
-    if cpu_vals:
-        print(f"[summary] cpu_percent: mean={sum(cpu_vals)/len(cpu_vals):.2f} peak={max(cpu_vals):.2f}")
-    print(f"[summary] rss_mb: mean={sum(rss_vals)/len(rss_vals):.1f} peak={max(rss_vals):.1f}")
+    total_elapsed = rows[-1]["elapsed_s"] if rows else last_elapsed
+    print(f"[overhead] chunk wrote {len(rows)} rows -> {out_path} (trial elapsed so far: {total_elapsed:.1f}s)")
 
 
 if __name__ == "__main__":

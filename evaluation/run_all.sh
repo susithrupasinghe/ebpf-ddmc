@@ -32,6 +32,11 @@ if [[ ! -S "$SOCK" ]]; then
   exit 1
 fi
 
+# P0-3: capture full platform facts + git SHA at the start of every run, so
+# results are never separated from the exact environment/artefact version
+# that produced them.
+python3 "${EVAL_DIR}/capture_platform.py" 2>&1 | tee -a "$LOG"
+
 run_track() {
   local name="$1"; shift
   log ""
