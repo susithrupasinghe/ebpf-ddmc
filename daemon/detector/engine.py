@@ -272,6 +272,14 @@ class DetectionEngine:
                         self._store[pid]["mitigation"] = result.mitigation
                         self._store[pid]["reasons"]    = result.reasons
                         self._store[pid]["ticks"]      = temp.suspicious_ticks
+                        # Exposed for evaluation capture only (Chapter 6 data
+                        # extraction, Task 7) -- fp.parallelism.cpu_percent was
+                        # already computed for scoring but previously discarded
+                        # once used, leaving no way to measure mitigation
+                        # effect (CPU before/after enforcement) from capture
+                        # CSVs alone. Read-only with respect to detection logic:
+                        # nothing here changes what is scored or how.
+                        self._store[pid]["cpu_percent"] = fp.parallelism.cpu_percent
 
                 if result.confidence == "NONE":
                     self._mitigated.pop(pid, None)

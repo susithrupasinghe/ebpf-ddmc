@@ -37,7 +37,8 @@ FIELDS = [
     "send", "recv", "brk", "thread_count", "on_cpu_ns",
     "voluntary_switches", "involuntary_switches", "total_connections",
     "mining_pool_hits", "total_mmap_bytes", "scratchpad_allocs",
-    "huge_page_requests", "large_alloc_count", "mprotect_large", "reasons",
+    "huge_page_requests", "large_alloc_count", "mprotect_large", "cpu_percent",
+    "reasons",
 ]
 
 CONFIDENCE_RANK = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
@@ -91,6 +92,7 @@ def _flatten(p: dict, wall_time: float, elapsed: float) -> dict:
         "huge_page_requests": mm.get("huge_page_requests", 0),
         "large_alloc_count": mm.get("large_alloc_count", 0),
         "mprotect_large": mm.get("mprotect_large", 0),
+        "cpu_percent": p.get("cpu_percent", ""),
         "reasons": "; ".join(p.get("reasons", [])),
     }
 

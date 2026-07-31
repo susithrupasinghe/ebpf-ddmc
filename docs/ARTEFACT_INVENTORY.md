@@ -219,6 +219,46 @@ code-consistent inference, not an independently re-verified causal chain in this
 
 ---
 
+## 4.5 `thread_density` vs `thread_cpu_ratio` — the specific conflict, resolved
+
+**The dissertation's `thread_density` name is not used anywhere in the live scoring
+pipeline.** There are, in fact, three distinct code paths touching this concept, not two:
+
+1. **`daemon/detector/features.py`** (`features.py:67-68,82`) is the *only* place the exact
+   name `thread_density` and the dissertation's own formula both appear:
+   `thread_density = min(thread_count / cpu_count, 2.0) / 2.0` — deliberately normalised to
+   `[0, 1]`. This module is dead code (§0 above): zero live call sites.
+2. **`daemon/detector/fingerprint.py:68,149`** (the live pipeline) computes
+   `thread_cpu_ratio = min(threads / cpu_count, 2.0)` — the same core ratio, but *without*
+   the `/2.0` step, so its range is `[0, 2]`, not `[0, 1]`. **`Scorer.score()` does not read
+   this field at all** — the scorer's own thread-saturation gates
+   (`scorer.py:192-201`, `thread_full_sat`/`thread_partial_sat`) compare the raw
+   `par.thread_count` against `cpu_count` directly, inline, never going through
+   `thread_cpu_ratio` or any name resembling `thread_density`.
+3. **`daemon/fingerprint/assessor.py:59`** (registry confirmation gate — not the scorer)
+   reads `par.thread_cpu_ratio >= STRONG_THREAD_DENSITY` (constant named `STRONG_THREAD_DENSITY`,
+   value `1.0`, `assessor.py:28`) — correct attribute name, but a constant name that imports
+   the dissertation's "density" terminology into code that actually gates on the
+   *unnormalised* `[0, 2]` ratio, not a `[0, 1]` density.
+
+**An additional divergence found while resolving this, not previously flagged:**
+`daemon/fingerprint/packager.py:36,56` — the registry-submission feature vector — uses the
+string key `"thread_density"` in its `FEATURE_NAMES` list, but assigns it
+`min(par.thread_cpu_ratio, 2.0)`, i.e. **fingerprint.py's un-normalised `[0, 2]` value,
+re-labelled under the dissertation's `[0, 1]`-implying name at the one place in the
+codebase where that exact string is emitted outward** (into the registry payload another
+node's matcher would compare against). This is a real naming/normalisation mismatch in the
+registry-submission path specifically — not merely a documentation gap — and should be
+corrected (either rename the packager's key to `thread_cpu_ratio`, or apply the same `/2.0`
+normalisation `features.py` uses before assigning it) before the registry channel is relied
+upon for the P0-1 two-node experiment, since two nodes comparing a field under a shared
+name that means two different scales would corrupt the cosine-similarity match.
+
+**For Chapter 5/6: state that the live scorer has no `thread_density` feature at all** —
+thread saturation is scored from the raw thread/CPU-core comparison directly. `thread_density`
+survives only as a name in dead code (`features.py`) and, inconsistently normalised, in the
+registry packager's export key.
+
 ## 5. Summary of divergences from thesis Chapter 5, for direct correction
 
 | Thesis claim | Actual code | Action needed |
@@ -228,3 +268,4 @@ code-consistent inference, not an independently re-verified causal chain in this
 | Table 2: MEDIUM = 30% cgroup throttle, HIGH = network block | Confirmed correct as implemented (§3 above) | No change needed |
 | §5.5.4 mitigations are reversible | Confirmed — `policy.py:94-107` unconditional revoke | No change needed, but effect (not just application) is unmeasured — see P1-2 |
 | Registry accelerates cross-deployment detection (RQ6, Objective 7) | Confirmation gate has never been empirically shown to fire; requires CRITICAL+pool+3 feature thresholds sustained 60s simultaneously, stricter than commonly assumed | See P0-1 investigation/decision, tracked separately |
+| `thread_density` (dissertation name) | Live scorer uses raw `thread_count` vs `cpu_count` directly, no ratio field at all; `thread_cpu_ratio` (unnormalised `[0,2]`) exists only for the registry gate; `packager.py` mislabels that unnormalised value as `"thread_density"` in registry submissions | See §4.5 above — rename/renormalise the packager key before relying on cross-node registry comparison |
