@@ -113,10 +113,15 @@ image rather than screen-captured; every character shown is copied from
 real output, documented in `evaluation/render_terminal_screenshots.py`):
 
 - `screenshot_eddmc_status.png` — `eddmc status`, captured while pid 15944
-  (xmrig) was actively under MEDIUM/THROTTLE (cross-referenced by timestamp
-  with the other two captures).
+  (xmrig) was scored at MEDIUM with THROTTLE as the decided mitigation tier
+  (cross-referenced by timestamp with the other two captures). **Correction
+  (`reports/INTEGRITY_CHECK.md` A2): this was dry-run** — the daemon logged
+  `[DRY-RUN] Would apply THROTTLE`, no cgroup quota was applied. The score
+  and tier decision are real; "actively under THROTTLE" as originally
+  written here overstated it as enforcement.
 - `screenshot_scored_process_list.png` — live `eddmc watch` table, real
-  XMRig at 45.0/MEDIUM/THROTTLE alongside ~30 other real tracked processes
+  XMRig at 45.0/MEDIUM with THROTTLE as the decided (dry-run, not enforced
+  — see correction above) tier, alongside ~30 other real tracked processes
   on the test host, all correctly at NONE.
 - `screenshot_medium_alert_breakdown.png` — `eddmc alerts` output showing
   the actual MEDIUM-tier detection with its full reason breakdown
@@ -162,44 +167,59 @@ two-thirds of the apparent recall gap in the headline figure is detection
 its own temporal-gating design), not a real miss — once given its own first
 alert onward, the detector achieves 89.1% recall.
 
-## Task 7 — mitigation effect (attempted; partially inconclusive)
+## Task 7 — mitigation effect (resolved: real 70% CPU reduction measured)
 
 Required exposing the scorer's already-computed `cpu_percent` internally
 (small, read-only-with-respect-to-detection-logic change: `daemon/detector/engine.py`
 now persists `fp.parallelism.cpu_percent` into the process store each tick;
 `evaluation/results_capture.py` now records it) and re-running one real
-XMRig track. This took three attempts:
+XMRig track. Getting a trustworthy number took considerably more digging
+than the "only if small" framing anticipated, across two distinct problems:
 
-1. First attempt was killed by the host's own memory limit (this test VM
-   has ~3.3GB RAM, already under real pressure from IDE/daemon/etc.) — and
-   left an **orphaned xmrig process running unsupervised for ~35 minutes**
-   because a `$!`-based PID capture inside a backgrounded multi-line script
-   did not reliably resolve to the actual xmrig PID in this harness. Found
-   and killed manually.
-2. Second attempt (lighter config: `--randomx-mode=light`, 2 threads)
-   completed, but its data was **contaminated by PID reuse**: the killed
-   orphan's stale detection state (23 accumulated "suspicious ticks",
-   already MEDIUM/THROTTLE) was still keyed under the same PID number, and
-   the kernel handed that exact PID to the new process, making it look
-   falsely like instant detection at t=0.
-3. Third attempt, after a full daemon restart (clears all in-memory
-   process-store state) and switching to `--comm`-based process matching
-   instead of PID matching: clean data, real NONE→LOW→MEDIUM/THROTTLE
-   progression over 90s.
+**Problem 1 — infrastructure, not code.** Repeated captures kept showing
+contaminated or frozen data (an orphaned xmrig process outliving a
+memory-limit kill; a killed process's stale detection state reappearing
+under a reused PID). Root cause: an `eddmc.service` **systemd-managed
+daemon instance had been running the entire session**, completely separate
+from the manually-run terminal instance being restarted for each attempt —
+two daemons competing for the same Unix socket, eBPF resources, and
+memory. Found via `systemctl status eddmc` (unexpectedly active), fixed
+with `sudo systemctl stop eddmc` plus killing the leftover process, then
+verifying a single clean instance before every subsequent capture.
 
-**Result**: `evaluation/results/mitigation_effect.md`. The clean run
-surfaced a genuine data-quality finding rather than a clean before/after
-number: `cpu_percent` is empty for every pre-detection tick in the capture
-and only starts being populated at the process's first LOW-tier detection
-— consistent with, but not fully explained by, psutil's documented
-`Process.cpu_percent(interval=None)` first-call-returns-0.0 convention.
-Root cause not fully chased down this round (a resource-prioritisation
-short-circuit for low-scoring PIDs upstream of `_cpu_percent()` is one
-candidate, unconfirmed). Only a post-THROTTLE reading is usable (92.6%
-mean CPU on 1 thread, n=23 ticks, remarkably steady — min=max=92.6) with
-no trustworthy unthrottled baseline to compare it against. Reported as
-attempted-but-inconclusive rather than forcing a before/after number that
-the data doesn't actually support.
+**Problem 2 — the new field itself looked broken.** Even with one clean
+daemon, `cpu_percent` came back empty for every pre-detection tick, no
+matter how the capture was structured. Root-caused with temporary log
+instrumentation in `engine.py` (added, used, then fully reverted — `git
+diff` on that file is empty against the committed baseline): this is
+**the same scan-cycle-latency defect already quantified in `REPORT.md`
+§4** (mean 20.2s, max 34.1s gaps between real `_scan()` invocations),
+surfacing in a new field. Direct proof: eBPF-collector output
+(`total_syscalls`) climbed every second while scorer output
+(`score`/`confidence`/`cpu_percent`) stayed frozen for 10+ consecutive
+polls, then jumped together — collectors run every second, the scorer
+does not. A 1-second poll was always going to see many repeated stale
+reads between real scans.
+
+**Fix, scoped to measurement only**: `evaluation/measure_mitigation_effect_v2.py`
+samples CPU utilisation independently via plain `psutil` from outside the
+daemon entirely (bypassing the scan-cycle cadence problem), using the
+daemon's own tier state only as a before/after boundary marker. The first
+run under this fix still showed no CPU drop at all — because
+`daemon/config/local.yaml` has `mitigation.dry_run: true` (a deliberate
+dev-safety default, alongside this host's own VS Code/Claude Code
+allowlist). With the user's explicit sign-off, one daemon restart used a
+`--config` layer (`{mitigation: {dry_run: false}}` only, `local.yaml`
+itself untouched — config load order is `defaults → local.yaml →
+--config`) to get real enforcement for a single ~90s XMRig run.
+
+**Result** (`evaluation/results/mitigation_effect.md`,
+`evaluation/results/mitigation_effect_v2.csv`): mean CPU utilisation was
+99.7% pre-detection (n=10), 100.1% at LOW/logged-only (n=12), and **30.0%
+once THROTTLE actually engaged** (n=67, settled — min 28.9%, max 30.9%,
+remarkably stable) — a **69.9-percentage-point (70%) real reduction**,
+converting "the quota was applied" into "the quota reduced utilisation by
+X" as the original brief asked for.
 
 ## Cross-cutting notes for whoever writes this into Chapter 6
 
@@ -214,7 +234,17 @@ the data doesn't actually support.
 - Task 2's `thread_density`/`thread_cpu_ratio`/packager mislabelling is a
   real, fixable bug worth a sentence in Chapter 6's limitations section —
   it was flagged, not patched, per this round's read-only scope.
-- Task 7's inconclusive result is itself worth a sentence: it demonstrates
-  the project's instrumentation gap (no clean CPU-before-enforcement
-  baseline currently exists anywhere in the capture pipeline) rather than
-  measuring the mitigation's real effect — a legitimate "future work" item.
+- Task 7's 70% CPU-reduction figure is real and defensible, but note in
+  Chapter 6 that it was obtained via independent `psutil` sampling, not the
+  daemon's own scan cadence — the scan-cycle-latency defect from `REPORT.md`
+  §4 makes the daemon's own `cpu_percent` field too coarse for this
+  specific measurement (it's still useful at coarser resolution). Also
+  worth a limitations-section sentence: this test environment runs with
+  `mitigation.dry_run: true` by default, so any future re-measurement needs
+  the same explicit real-enforcement opt-in this round required.
+- Tangential finding worth a footnote even though it's outside this round's
+  scope: an `eddmc.service` systemd unit was found active in parallel with
+  the manually-run daemon for most of this session, and — separately — a
+  killed daemon process (PID 20069) continued running for several minutes
+  after logging its own shutdown message, a real (if not chased down)
+  clean-shutdown bug.
