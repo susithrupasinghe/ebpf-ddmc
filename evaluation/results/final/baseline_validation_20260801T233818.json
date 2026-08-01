@@ -1,0 +1,10 @@
+{
+  "validation": {
+    "xmrig_ground_truth_1M.csv": {
+      "n": 285,
+      "mean": 0.009994219257428938,
+      "max": 0.12933804878048777
+    }
+  },
+  "signal_usable": false
+}

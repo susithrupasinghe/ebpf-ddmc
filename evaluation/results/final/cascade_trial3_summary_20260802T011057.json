@@ -1,0 +1,37 @@
+{
+  "trial_index": 3,
+  "stratum_connections_seen": 1,
+  "stratum_jobs_sent": 1,
+  "stratum_submits_seen": 0,
+  "events": [
+    [
+      81.78894901275635,
+      "first CRITICAL, score=84.0"
+    ],
+    [
+      81.78894901275635,
+      "revoke called, cgroup_removed=True, proc_resumed=True"
+    ]
+  ],
+  "reversibility_test": {
+    "revoke_api_response": {
+      "ok": true,
+      "pid": 75158
+    },
+    "elapsed_s": 81.78894901275635,
+    "cgroup_quota_existed_before": true,
+    "cgroup_quota_exists_after": false,
+    "proc_state_after_revoke": "S",
+    "iptables_had_block_before": true,
+    "iptables_has_block_after": false
+  },
+  "cgroup_quota_exists_at_end": false,
+  "cgroup_quota_value_at_end": null,
+  "proc_state_at_end": "S",
+  "firewall_state_at_end": {
+    "iptables_output": "Chain INPUT (policy ACCEPT 0 packets, 0 bytes)\n pkts bytes target     prot opt in     out     source               destination         \n\nChain FORWARD (policy ACCEPT 0 packets, 0 bytes)\n pkts bytes target     prot opt in     out     source               destination         \n\nChain OUTPUT (policy ACCEPT 26441 packets, 90M bytes)\n pkts bytes target     prot opt in     out     source               destination",
+    "nftables_output": "table ip filter {\n\tchain OUTPUT {\n\t\ttype filter hook output priority filter; policy accept;\n\t}\n}"
+  },
+  "peak_score": 100.0,
+  "peak_confidence": "CRITICAL"
+}
