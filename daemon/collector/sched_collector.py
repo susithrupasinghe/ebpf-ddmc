@@ -55,19 +55,49 @@ class SchedCollector:
                 sched["thread_count"] = max(sched["thread_count"] - 1, 0)
 
     def _poll_bpf_maps(self):
+        """
+        sched_stats is keyed by raw TID (one entry per thread -- see
+        sched_monitor.c). Reading each entry's own on_cpu_ns/switch counts
+        directly, as this used to do, means a process whose real work runs
+        on worker threads (not its leader) reads as almost entirely idle:
+        the exit-time fold in sched_monitor.c only recovers a worker's
+        stats once that worker exits, which for a long-lived multi-threaded
+        process (e.g. a miner still running when this poll happens) may
+        never occur during the whole observation window.
+
+        Fixed here: group every live entry by its `tgid` field (set at
+        fork time in sched_monitor.c; 0 means "unknown group, own pid is
+        its own tgid" -- covers threads that predate this program loading)
+        and sum on_cpu_ns/voluntary/involuntary across the whole group on
+        every poll, live, regardless of whether any thread has exited yet.
+        Only the group leader's process_store entry is written -- a
+        non-leader TID's raw entry is not turned into its own store row,
+        since it does not correspond to a real top-level /proc/<pid> the
+        rest of the daemon would ever meaningfully track on its own.
+        """
         sched_stats = self._bpf["sched_stats"]
+        groups = {}  # effective_tgid -> {"on_cpu_ns":..,"voluntary":..,"involuntary":..,"thread_count":..}
         for k, v in sched_stats.items():
-            pid = k.value
+            tid = k.value
+            effective_tgid = v.tgid if v.tgid else tid
+            g = groups.setdefault(effective_tgid, {"on_cpu_ns": 0, "voluntary": 0, "involuntary": 0, "thread_count": 0})
+            g["on_cpu_ns"]    += v.on_cpu_ns
+            g["voluntary"]    += v.voluntary_switches
+            g["involuntary"]  += v.involuntary_switches
+            if v.thread_count > g["thread_count"]:
+                g["thread_count"] = v.thread_count  # only the leader's own entry carries a real count
+
+        for tgid, g in groups.items():
             with self._lock:
-                if pid not in self._store:
+                if tgid not in self._store:
                     from daemon.collector.syscall_collector import _empty_process
-                    self._store[pid] = _empty_process(pid, "")
-                sched = self._store[pid]["sched"]
-                sched["on_cpu_ns"]            = v.on_cpu_ns
-                sched["voluntary_switches"]   = v.voluntary_switches
-                sched["involuntary_switches"] = v.involuntary_switches
-                if v.thread_count > 0:
-                    sched["thread_count"] = v.thread_count
+                    self._store[tgid] = _empty_process(tgid, "")
+                sched = self._store[tgid]["sched"]
+                sched["on_cpu_ns"]            = g["on_cpu_ns"]
+                sched["voluntary_switches"]   = g["voluntary"]
+                sched["involuntary_switches"] = g["involuntary"]
+                if g["thread_count"] > 0:
+                    sched["thread_count"] = g["thread_count"]
 
     def start(self):
         self._running = True
