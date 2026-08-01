@@ -1,0 +1,30 @@
+{
+  "condition": "3_daemon_running_benign_workload",
+  "workload": "openssl speed aes-256-cbc (single process, not -multi)",
+  "trials": [
+    {
+      "trial": 1,
+      "system_cpu_pct_one_core_mean": 288.85333333333335,
+      "daemon_cpu_pct_mean": 152.18666666666667,
+      "daemon_rss_mb_mean": 238.55078125
+    },
+    {
+      "trial": 2,
+      "system_cpu_pct_one_core_mean": 297.52000000000004,
+      "daemon_cpu_pct_mean": 152.79333333333335,
+      "daemon_rss_mb_mean": 233.52278645833334
+    },
+    {
+      "trial": 3,
+      "system_cpu_pct_one_core_mean": 295.6,
+      "daemon_cpu_pct_mean": 154.85,
+      "daemon_rss_mb_mean": 232.55807291666667
+    }
+  ],
+  "duration_s_per_trial": 30,
+  "n_trials": 3,
+  "reduced_scope_reason": "systemd-oomd killed the measurement process repeatedly when openssl was launched via subprocess.Popen from inside a long-running Python monitoring script (even single-process, even 5 trials at 60s, even 3 at 30s) -- root cause appears to be spawning a subprocess from within a script tracked as a background task by the harness, not memory pressure alone (no kernel OOM events, and the same duration/workload succeeded once restructured as bash-native '&' backgrounding + a separate short monitoring call per trial). Reduced to 3 trials x 30s, this pattern, single-process (not -multi 4) openssl to keep each trial short and simple.",
+  "daemon_cpu_mean_of_means_pct": 153.27666666666667,
+  "daemon_cpu_sd_pct": 1.139749810102909,
+  "system_cpu_mean_of_means_pct_one_core": 293.99111111111114
+}

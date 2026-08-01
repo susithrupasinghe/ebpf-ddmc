@@ -1,0 +1,33 @@
+{
+  "condition": "1_daemon_stopped_baseline",
+  "trials": [
+    {
+      "trial": 1,
+      "system_cpu_pct_one_core_mean": 8.826666666666666,
+      "system_cpu_pct_one_core_peak": 49.6
+    },
+    {
+      "trial": 2,
+      "system_cpu_pct_one_core_mean": 6.819999999999999,
+      "system_cpu_pct_one_core_peak": 20.8
+    },
+    {
+      "trial": 3,
+      "system_cpu_pct_one_core_mean": 6.38,
+      "system_cpu_pct_one_core_peak": 9.2
+    },
+    {
+      "trial": 4,
+      "system_cpu_pct_one_core_mean": 6.16,
+      "system_cpu_pct_one_core_peak": 10.0
+    },
+    {
+      "trial": 5,
+      "system_cpu_pct_one_core_mean": 6.7,
+      "system_cpu_pct_one_core_peak": 40.8
+    }
+  ],
+  "duration_s_per_trial": 60,
+  "mean_of_means_pct_one_core": 6.977333333333332,
+  "sd_pct_one_core": 0.9535766589238875
+}

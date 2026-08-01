@@ -1,0 +1,11 @@
+{
+  "condition": "4_daemon_running_xmrig_active",
+  "workload": "xmrig --bench=3M --randomx-mode=light -t 4",
+  "duration_s": 35,
+  "system_cpu_pct_one_core_mean": 397.6114285714286,
+  "system_cpu_pct_one_core_peak": 400.0,
+  "daemon_cpu_pct_mean": 97.33142857142857,
+  "daemon_cpu_pct_peak": 120.9,
+  "daemon_rss_mb_mean": 230.3984375,
+  "daemon_rss_mb_peak": 230.3984375
+}

@@ -1,0 +1,30 @@
+{
+  "condition": "4_daemon_running_xmrig_active",
+  "workload": "xmrig --bench=1M --randomx-mode=light -t 4",
+  "trials": [
+    {
+      "trial": 1,
+      "system_cpu_pct_one_core_mean": 399.73333333333335,
+      "daemon_cpu_pct_mean": 96.21666666666667,
+      "daemon_rss_mb_mean": 226.11328125
+    },
+    {
+      "trial": 2,
+      "system_cpu_pct_one_core_mean": 399.7866666666667,
+      "daemon_cpu_pct_mean": 95.98666666666666,
+      "daemon_rss_mb_mean": 229.93385416666666
+    },
+    {
+      "trial": 3,
+      "system_cpu_pct_one_core_mean": 399.81333333333333,
+      "daemon_cpu_pct_mean": 94.97666666666667,
+      "daemon_rss_mb_mean": 229.9765625
+    }
+  ],
+  "duration_s_per_trial": 30,
+  "n_trials": 3,
+  "reduced_scope_reason": "3 trials x 30s (not the full 5x300s+ spec) for time/systemd-oomd reasons -- same as condition 3, see its own reduced_scope_reason for the full explanation.",
+  "daemon_cpu_mean_of_means_pct": 95.72666666666667,
+  "daemon_cpu_sd_pct": 0.5385783756025333,
+  "system_cpu_mean_of_means_pct_one_core": 399.7777777777778
+}

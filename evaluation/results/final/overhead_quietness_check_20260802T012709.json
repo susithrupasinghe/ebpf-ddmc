@@ -1,0 +1,7 @@
+{
+  "host_suitable": false,
+  "quietness_mean_pct_one_core": 18.886666666666667,
+  "quietness_peak_pct_one_core": 61.6,
+  "n_cores": 4,
+  "note": "Checked twice: pre-reboot peak ~73%, post-reboot (fresh reboot, uptime 0 min) peak 61.6% -- improved but still 3x over the ~20% gate. Dominant CPU consumers even fresh after reboot were VS Code and the Claude Code CLI session itself (ps aux confirmed), which cannot be closed while this evaluation session is the one running the check -- a structural limitation of this host for this specific measurement, not a transient noise spike. User confirmed no time budget to run the full 4-condition x 5-trial x 300s (~60-100 min) measurement regardless."
+}

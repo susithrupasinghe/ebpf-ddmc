@@ -1,0 +1,85 @@
+{
+  "host_suitable": false,
+  "reduced_scope_note": "PARTIAL-SPEC 5-TRIAL MEASUREMENT: conditions 1 and 2 only (the two RO2 core-claim conditions -- daemon stopped vs. daemon idle), 5 trials x 60s each (not the full >=300s spec) -- a disclosed deviation for time reasons. Conditions 3 (benign workload) and 4 (xmrig active), which characterise overhead under load for RO6 rather than the core RO2 \"is it lightweight\" claim, remain single-trial spot-checks from the earlier reduced-scope run (see overhead_summary_*.json). This IS a properly validated mean/SD for conditions 1-2, on a host that itself was never fully quiet, but the daemon-specific measurements (its own psutil-tracked CPU%/RSS) are not materially affected by ambient system noise the way system-wide totals are.",
+  "condition_1_daemon_stopped": {
+    "n_trials": 5,
+    "duration_s_per_trial": 60,
+    "system_cpu_pct_one_core_mean_of_means": 6.977333333333332,
+    "system_cpu_pct_one_core_sd": 0.9535766589238875,
+    "trials": [
+      {
+        "trial": 1,
+        "system_cpu_pct_one_core_mean": 8.826666666666666,
+        "system_cpu_pct_one_core_peak": 49.6
+      },
+      {
+        "trial": 2,
+        "system_cpu_pct_one_core_mean": 6.819999999999999,
+        "system_cpu_pct_one_core_peak": 20.8
+      },
+      {
+        "trial": 3,
+        "system_cpu_pct_one_core_mean": 6.38,
+        "system_cpu_pct_one_core_peak": 9.2
+      },
+      {
+        "trial": 4,
+        "system_cpu_pct_one_core_mean": 6.16,
+        "system_cpu_pct_one_core_peak": 10.0
+      },
+      {
+        "trial": 5,
+        "system_cpu_pct_one_core_mean": 6.7,
+        "system_cpu_pct_one_core_peak": 40.8
+      }
+    ]
+  },
+  "condition_2_daemon_idle": {
+    "n_trials": 5,
+    "duration_s_per_trial": 60,
+    "system_cpu_pct_one_core_mean_of_means": 167.044,
+    "daemon_cpu_pct_mean_of_means": 163.58700000000002,
+    "daemon_cpu_pct_sd": 2.7178529925087744,
+    "daemon_rss_mb_mean": 232.7871875,
+    "trials": [
+      {
+        "trial": 1,
+        "system_cpu_pct_one_core_mean": 164.93333333333334,
+        "daemon_cpu_pct_mean": 159.87333333333333,
+        "daemon_cpu_pct_peak": 202.9,
+        "daemon_rss_mb_mean": 232.675
+      },
+      {
+        "trial": 2,
+        "system_cpu_pct_one_core_mean": 164.72666666666666,
+        "daemon_cpu_pct_mean": 161.23000000000002,
+        "daemon_cpu_pct_peak": 201.9,
+        "daemon_rss_mb_mean": 232.67578125
+      },
+      {
+        "trial": 3,
+        "system_cpu_pct_one_core_mean": 170.29333333333335,
+        "daemon_cpu_pct_mean": 167.38666666666668,
+        "daemon_cpu_pct_peak": 202.9,
+        "daemon_rss_mb_mean": 232.71354166666666
+      },
+      {
+        "trial": 4,
+        "system_cpu_pct_one_core_mean": 166.97333333333333,
+        "daemon_cpu_pct_mean": 164.18833333333336,
+        "daemon_cpu_pct_peak": 201.9,
+        "daemon_rss_mb_mean": 232.9208984375
+      },
+      {
+        "trial": 5,
+        "system_cpu_pct_one_core_mean": 168.29333333333335,
+        "daemon_cpu_pct_mean": 165.25666666666666,
+        "daemon_cpu_pct_peak": 200.9,
+        "daemon_rss_mb_mean": 232.95071614583333
+      }
+    ]
+  },
+  "marginal_overhead_system_wide_pct_one_core": 160.0666666666667,
+  "marginal_overhead_from_daemon_own_measurement_pct_one_core": 163.58700000000002,
+  "cross_validation_note": "System-wide marginal (160.1 pct) and the daemon's own directly-measured CPU (163.6 pct) agree closely -- cross-validates both measurement methods."
+}

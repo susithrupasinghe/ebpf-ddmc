@@ -103,6 +103,7 @@ class EDDMCDaemon:
         if fp_enabled:
             assessor = FingerprintAssessor(
                 sustained_critical_seconds=fp_cfg.get("sustained_critical_seconds", 60),
+                min_syscalls=cfg.get("detection", {}).get("min_syscalls", 500),
             )
             submitter = FingerprintSubmitter(fp_cfg["registry_url"])
             matcher = FingerprintMatcher(

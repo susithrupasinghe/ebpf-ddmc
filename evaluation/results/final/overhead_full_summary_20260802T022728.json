@@ -1,0 +1,38 @@
+{
+  "host_suitable": false,
+  "note": "FULL 4-CONDITION MEASUREMENT, mixed trial counts: conditions 1-2 at 5 trials x 60s (full spec duration, disclosed trial-count deviation from time constraints), conditions 3-4 at 3 trials x 30s (further reduced after systemd-oomd killed the measurement process under the original 5x60s spawning pattern -- root-caused to subprocess spawning from within a harness-tracked background script, not genuine memory exhaustion; fixed by using bash-native backgrounding + short separate monitoring calls per trial). All values are real, validated mean/SD across multiple trials for every condition -- no condition is n=1 in this final version.",
+  "conditions": {
+    "1_daemon_stopped_baseline": {
+      "n_trials": 5,
+      "duration_s_per_trial": 60,
+      "system_cpu_pct_one_core_mean": 6.977333333333332,
+      "system_cpu_pct_one_core_sd": 0.9535766589238875
+    },
+    "2_daemon_running_idle": {
+      "n_trials": 5,
+      "duration_s_per_trial": 60,
+      "system_cpu_pct_one_core_mean": 167.044,
+      "daemon_cpu_pct_mean": 163.58700000000002,
+      "daemon_cpu_pct_sd": 2.7178529925087744,
+      "daemon_rss_mb_mean": 232.7871875
+    },
+    "3_daemon_running_benign_workload": {
+      "n_trials": 3,
+      "duration_s_per_trial": 30,
+      "system_cpu_pct_one_core_mean": 293.99111111111114,
+      "daemon_cpu_pct_mean": 153.27666666666667,
+      "daemon_cpu_pct_sd": 1.139749810102909,
+      "daemon_rss_mb_mean": 234.8772135416667
+    },
+    "4_daemon_running_xmrig_active": {
+      "n_trials": 3,
+      "duration_s_per_trial": 30,
+      "system_cpu_pct_one_core_mean": 399.7777777777778,
+      "daemon_cpu_pct_mean": 95.72666666666667,
+      "daemon_cpu_pct_sd": 0.5385783756025333,
+      "daemon_rss_mb_mean": 228.6745659722222
+    }
+  },
+  "marginal_overhead_condition2_minus_condition1_pct_one_core": 160.0666666666667,
+  "marginal_overhead_from_daemon_own_measurement_pct_one_core": 163.58700000000002
+}

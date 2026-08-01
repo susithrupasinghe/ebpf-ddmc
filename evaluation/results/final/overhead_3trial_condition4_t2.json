@@ -1,0 +1,6 @@
+{
+  "trial": 2,
+  "system_cpu_pct_one_core_mean": 399.7866666666667,
+  "daemon_cpu_pct_mean": 95.98666666666666,
+  "daemon_rss_mb_mean": 229.93385416666666
+}

@@ -1,0 +1,11 @@
+{
+  "condition": "3_daemon_running_benign_workload",
+  "workload": "openssl speed -multi 4 aes-256-cbc",
+  "duration_s": 35,
+  "system_cpu_pct_one_core_mean": 399.6457142857143,
+  "system_cpu_pct_one_core_peak": 400.0,
+  "daemon_cpu_pct_mean": 96.7,
+  "daemon_cpu_pct_peak": 123.9,
+  "daemon_rss_mb_mean": 233.14330357142856,
+  "daemon_rss_mb_peak": 233.81640625
+}

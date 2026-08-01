@@ -1,0 +1,30 @@
+{
+  "source": "/home/susith/Desktop/Research impl/final/ebpf-ddmc/evaluation/results/final/cascade_trial3_20260802T011057.csv",
+  "original_gate": {
+    "sustained_critical_60s": true,
+    "pool_connection": true,
+    "futex_ratio_0.40": false,
+    "cpu_bound_ratio_0.92": true,
+    "thread_cpu_ratio_1.0": true
+  },
+  "peak_score": 100.0,
+  "peak_confidence": "CRITICAL",
+  "distributions": {
+    "mining_futex_ratio_max": 0.04390243902439024,
+    "benign_futex_ratio_max": 0.12429378531073447,
+    "note": "benign max exceeds mining max -- futex_ratio cannot discriminate here"
+  },
+  "recalibrated_gate": {
+    "cpu_bound_ratio": 0.92,
+    "thread_cpu_ratio": 1.0,
+    "min_syscalls": 500
+  },
+  "poisoning_check": {
+    "benign_total": 5097,
+    "benign_pass_original": 0,
+    "benign_pass_recalibrated": 0
+  },
+  "recalibration_accepted": true,
+  "recalibrated_gate_features_pass_on_peak": true,
+  "recalibrated_gate_all_pass_on_peak": true
+}

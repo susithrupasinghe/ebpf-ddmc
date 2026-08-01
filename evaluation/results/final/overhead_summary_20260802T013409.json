@@ -1,0 +1,52 @@
+{
+  "host_suitable": false,
+  "reduced_scope_note": "REDUCED-SCOPE SPOT-CHECK, not the full spec (4 conditions x 5 trials x >=300s). This is 4 conditions x 1 trial x 35-60s each, run because the full ~60-100 minute measurement was not time-feasible this round. Real, measured numbers -- not estimates -- but a much smaller sample than the spec calls for, and taken on a host that never cleared the ~20%-of-one-core quietness gate (peak 61.6% even fresh after reboot, dominated by VS Code and the Claude Code session itself). No mean/SD across multiple trials is reported since n=1 per condition.",
+  "quietness_mean_pct_one_core": 18.886666666666667,
+  "quietness_peak_pct_one_core": 61.6,
+  "n_cores": 4,
+  "conditions": {
+    "1_daemon_stopped_baseline": {
+      "condition": "1_daemon_stopped_baseline",
+      "duration_s": 60,
+      "system_cpu_pct_one_core_mean": 18.886666666666667,
+      "system_cpu_pct_one_core_peak": 61.6
+    },
+    "2_daemon_running_idle": {
+      "condition": "2_daemon_running_idle",
+      "duration_s": 40,
+      "system_cpu_pct_one_core_mean": 164.27,
+      "system_cpu_pct_one_core_peak": 222.8,
+      "daemon_cpu_pct_mean": 159.465,
+      "daemon_cpu_pct_peak": 199.9,
+      "daemon_rss_mb_mean": 231.946484375,
+      "daemon_rss_mb_peak": 232.0
+    },
+    "3_daemon_running_benign_workload": {
+      "condition": "3_daemon_running_benign_workload",
+      "workload": "openssl speed -multi 4 aes-256-cbc",
+      "duration_s": 35,
+      "system_cpu_pct_one_core_mean": 399.6457142857143,
+      "system_cpu_pct_one_core_peak": 400.0,
+      "daemon_cpu_pct_mean": 96.7,
+      "daemon_cpu_pct_peak": 123.9,
+      "daemon_rss_mb_mean": 233.14330357142856,
+      "daemon_rss_mb_peak": 233.81640625
+    },
+    "4_daemon_running_xmrig_active": {
+      "condition": "4_daemon_running_xmrig_active",
+      "workload": "xmrig --bench=3M --randomx-mode=light -t 4",
+      "duration_s": 35,
+      "system_cpu_pct_one_core_mean": 397.6114285714286,
+      "system_cpu_pct_one_core_peak": 400.0,
+      "daemon_cpu_pct_mean": 97.33142857142857,
+      "daemon_cpu_pct_peak": 120.9,
+      "daemon_rss_mb_mean": 230.3984375,
+      "daemon_rss_mb_peak": 230.3984375
+    }
+  },
+  "marginal_overhead_condition2_minus_condition1_pct_one_core": 145.38333333333335,
+  "daemon_rss_mb_range_observed": [
+    230.3984375,
+    233.81640625
+  ]
+}

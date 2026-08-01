@@ -1,0 +1,10 @@
+{
+  "condition": "2_daemon_running_idle",
+  "duration_s": 40,
+  "system_cpu_pct_one_core_mean": 164.27,
+  "system_cpu_pct_one_core_peak": 222.8,
+  "daemon_cpu_pct_mean": 159.465,
+  "daemon_cpu_pct_peak": 199.9,
+  "daemon_rss_mb_mean": 231.946484375,
+  "daemon_rss_mb_peak": 232.0
+}
