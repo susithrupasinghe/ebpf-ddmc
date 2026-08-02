@@ -1,5 +1,5 @@
 {
-  "captured_at_unix": 1785649592.480654,
+  "captured_at_unix": 1785653267.6779532,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
@@ -7,20 +7,15 @@
   "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "3d54853ff9155d44037446ebe1b64cb2dccbede4",
+    "sha": "1ebab6860a80f7c36e84bcfc0a5ef3b91865cc0a",
     "dirty": true,
     "dirty_files": [
-      "M evaluation/browser_wasm/puppeteer_test.js",
-      " M evaluation/eddmc_eval.py",
+      "M evaluation/eddmc_eval.py",
       " M evaluation/results/final/platform.json",
-      "?? evaluation/results/final/capture_browser_wasm_miner_postfix_20260802T105554.csv",
-      "?? evaluation/results/final/capture_netdebug2_20260802T110324.csv",
-      "?? evaluation/results/final/capture_netdebug3_20260802T110513.csv",
-      "?? evaluation/results/final/capture_netdebug4_20260802T110838.csv",
-      "?? evaluation/results/final/capture_network_pool_blocklist_debug_repro_20260802T110053.csv",
-      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t1_20260802T105652.csv",
-      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t1_20260802T111446.csv",
-      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t2_20260802T111625.csv"
+      "?? evaluation/results/final/capture_benign_openssl_ro2_reverify_20260802T121606.csv",
+      "?? evaluation/results/final/capture_evasion_throttled_ro2_reverify_20260802T121358.csv",
+      "?? evaluation/results/final/cascade_trial1_20260802T120748.csv",
+      "?? evaluation/results/final/cascade_trial1_summary_20260802T120748.json"
     ]
   }
 }

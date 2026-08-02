@@ -633,17 +633,26 @@ def cmd_capture(args):
     # puppeteer_test.js for the browser_wasm_miner track) instead of spawning
     # one ourselves. The caller owns the process's lifecycle in that case --
     # we only poll and write the CSV, never kill it.
+    # --comm: track every process whose comm contains this substring instead
+    # of one pid -- needed for a workload (e.g. a gcc compile) that forks
+    # short-lived worker children (cc1/as/ld) under different pids than the
+    # wrapper shell that launches them.
     proc = None
+    target_pid = None
     if args.pid is not None:
         target_pid = args.pid
         print(f"[capture] tracking externally-launched pid={target_pid}")
+    elif args.comm:
+        proc = subprocess.Popen(["bash", "-c", args.xmrig_args],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        print(f"[capture] tracking every comm containing {args.comm!r} (wrapper pid={proc.pid})")
     else:
         xmrig_argv = [args.binary] + args.xmrig_args.split()
         proc = subprocess.Popen(xmrig_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         target_pid = proc.pid
 
     try:
-        rows = capture_loop(duration=args.duration, interval=1.0, pid=target_pid)
+        rows = capture_loop(duration=args.duration, interval=1.0, pid=target_pid, comm=args.comm)
     finally:
         if proc is not None:
             proc.kill()
@@ -2235,6 +2244,9 @@ def main():
     p.add_argument("--pid", type=int, default=None,
                    help="Track an already-running process instead of spawning --binary "
                         "(e.g. a browser launched externally by puppeteer_test.js).")
+    p.add_argument("--comm", default=None,
+                   help="Track every process whose comm contains this substring, launched via "
+                        "`bash -c <xmrig-args>` (e.g. a gcc compile loop spawning cc1/as/ld).")
     p.set_defaults(func=cmd_capture)
 
     p = sub.add_parser("cascade")
