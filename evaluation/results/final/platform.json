@@ -1,5 +1,5 @@
 {
-  "captured_at_unix": 1785645476.4905078,
+  "captured_at_unix": 1785649592.480654,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
@@ -7,11 +7,20 @@
   "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "442d36d55c7237abbb1e0c88f8e99791db22b496",
+    "sha": "3d54853ff9155d44037446ebe1b64cb2dccbede4",
     "dirty": true,
     "dirty_files": [
-      "M daemon/fingerprint/packager.py",
-      "?? \"Eddmc closure round prompt.md\""
+      "M evaluation/browser_wasm/puppeteer_test.js",
+      " M evaluation/eddmc_eval.py",
+      " M evaluation/results/final/platform.json",
+      "?? evaluation/results/final/capture_browser_wasm_miner_postfix_20260802T105554.csv",
+      "?? evaluation/results/final/capture_netdebug2_20260802T110324.csv",
+      "?? evaluation/results/final/capture_netdebug3_20260802T110513.csv",
+      "?? evaluation/results/final/capture_netdebug4_20260802T110838.csv",
+      "?? evaluation/results/final/capture_network_pool_blocklist_debug_repro_20260802T110053.csv",
+      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t1_20260802T105652.csv",
+      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t1_20260802T111446.csv",
+      "?? evaluation/results/final/capture_network_pool_blocklist_postfix_t2_20260802T111625.csv"
     ]
   }
 }

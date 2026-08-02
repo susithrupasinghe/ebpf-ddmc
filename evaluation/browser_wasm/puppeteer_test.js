@@ -42,11 +42,11 @@ async function main() {
   const capture = spawn(
     "python3",
     [
-      path.join(EVAL_DIR, "results_capture.py"),
-      "--label", "browser_wasm_miner",
+      path.join(EVAL_DIR, "eddmc_eval.py"),
+      "capture",
+      "--track", "browser_wasm_miner_postfix",
       "--pid", String(pid),
       "--duration", String(DURATION),
-      "--interval", "1",
     ],
     { stdio: "inherit" }
   );

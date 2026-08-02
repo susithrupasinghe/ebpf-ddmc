@@ -629,16 +629,28 @@ def cmd_capture(args):
         listener.start()
         print("[capture] mock stratum listener up on 127.0.0.1:3333")
 
-    xmrig_argv = [args.binary] + args.xmrig_args.split()
-    proc = subprocess.Popen(xmrig_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # --pid: track an externally-launched process (e.g. a browser driven by
+    # puppeteer_test.js for the browser_wasm_miner track) instead of spawning
+    # one ourselves. The caller owns the process's lifecycle in that case --
+    # we only poll and write the CSV, never kill it.
+    proc = None
+    if args.pid is not None:
+        target_pid = args.pid
+        print(f"[capture] tracking externally-launched pid={target_pid}")
+    else:
+        xmrig_argv = [args.binary] + args.xmrig_args.split()
+        proc = subprocess.Popen(xmrig_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        target_pid = proc.pid
+
     try:
-        rows = capture_loop(duration=args.duration, interval=1.0, pid=proc.pid)
+        rows = capture_loop(duration=args.duration, interval=1.0, pid=target_pid)
     finally:
-        proc.kill()
-        try:
-            proc.wait(timeout=3)
-        except Exception:
-            pass
+        if proc is not None:
+            proc.kill()
+            try:
+                proc.wait(timeout=3)
+            except Exception:
+                pass
         if listener:
             listener.stop()
 
@@ -851,8 +863,17 @@ POSTFIX_MINING_TRACKS = [
      os.path.join(REPO_ROOT, "evaluation", "results", "postfix", "xmrig_postfix.csv"), True),
     ("evasion_throttled_1thread (recaptured)", _glob_latest("capture_evasion_throttled_postfix_*.csv"), True),
     ("packed_xmrig (recaptured)", _glob_latest("capture_packed_xmrig_postfix_*.csv"), True),
-    ("network_pool_blocklist", None, True),   # not recaptured this round
-    ("browser_wasm_miner", None, True),        # not recaptured this round
+    # RO6 closure round: recaptured with a 90s duration (vs. the original
+    # 20-30s), needed to reliably survive the documented GIL scan-latency
+    # inflation (DetectionEngine._scan() shares the GIL with 4 eBPF collector
+    # threads; observed scan gaps of 13-34s against the 5s config -- a
+    # ~20-30s-lived process can fall entirely inside one gap and never get
+    # scored). Confirmed the same root cause reproduces on the current,
+    # fixed collector; not a new bug, see project memory / REPORT.md history.
+    ("network_pool_blocklist_t1 (recaptured)", _glob_latest("capture_network_pool_blocklist_postfix_t1_*.csv"), True),
+    ("network_pool_blocklist_t2 (recaptured)", _glob_latest("capture_network_pool_blocklist_postfix_t2_*.csv"), True),
+    ("network_pool_blocklist_t3 (recaptured)", _glob_latest("capture_network_pool_blocklist_postfix_t3_*.csv"), True),
+    ("browser_wasm_miner (recaptured)", _glob_latest("capture_browser_wasm_miner_postfix_*.csv"), True),
 ]
 POSTFIX_BENIGN_TRACKS = [
     ("benign_openssl (recaptured)", _glob_latest("capture_benign_openssl_postfix_*.csv"), False),
@@ -1998,6 +2019,9 @@ def main():
     p.add_argument("--pool", action="store_true")
     p.add_argument("--binary", default="/usr/bin/xmrig")
     p.add_argument("--xmrig-args", default="--bench=1M --randomx-mode=light -t 4 --no-color")
+    p.add_argument("--pid", type=int, default=None,
+                   help="Track an already-running process instead of spawning --binary "
+                        "(e.g. a browser launched externally by puppeteer_test.js).")
     p.set_defaults(func=cmd_capture)
 
     p = sub.add_parser("cascade")
