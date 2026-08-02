@@ -7,27 +7,33 @@ syscall statistics into the shared process state store.
 
 import os
 import threading
-import ctypes
+import time
 from bcc import BPF
 
 EBPF_SRC = os.path.join(os.path.dirname(__file__), "../ebpf/syscall_monitor.c")
 
-
-class SyscallEvent(ctypes.Structure):
-    _fields_ = [
-        ("pid",          ctypes.c_uint32),
-        ("uid",          ctypes.c_uint32),
-        ("syscall_nr",   ctypes.c_uint64),
-        ("timestamp_ns", ctypes.c_uint64),
-        ("comm",         ctypes.c_char * 16),
-    ]
+# RO2 closure round (Task 1.1/1.2): profiling attributed ~96% of one core to
+# this collector's thread, the single biggest driver of the daemon's overall
+# overhead figure -- far more than the detection engine's own scoring loop.
+# Root cause: syscall_monitor.c's raw_syscalls/sys_enter tracepoint fires on
+# EVERY syscall from EVERY process on the host and used to perf_submit() a
+# full event for each one, driving a Python-side perf-buffer callback at that
+# same host-wide rate. The per-event data it built (`syscall_events`, a raw
+# timestamped syscall-number list) was never read anywhere outside this file
+# except to be stripped back out before API serialisation (see
+# daemon/ipc/socket_server.py's do_GET) -- confirmed via a full-repo grep, it
+# had no scoring or detection consumer. The BPF hash-map poll below already
+# independently maintains every counter the scorer actually uses, aggregated
+# in-kernel, so removing the perf-event path (both here and in the .c source)
+# has no detection-logic effect -- it deletes dead computation, not a signal.
+POLL_INTERVAL_S = 1.0
 
 
 class SyscallCollector:
     """
-    Loads syscall_monitor.c and continuously polls the perf ring buffer.
+    Loads syscall_monitor.c and periodically polls its BPF hash-map counters.
     Writes per-PID syscall counts into `process_store` (dict shared with
-    the detector).  Also maintains a window of raw events for timing analysis.
+    the detector).
     """
 
     def __init__(self, process_store: dict, lock: threading.Lock):
@@ -40,24 +46,6 @@ class SyscallCollector:
         with open(EBPF_SRC, "r") as f:
             src = f.read()
         self._bpf = BPF(text=src)
-
-    def _on_syscall_event(self, cpu, data, size):
-        ev = ctypes.cast(data, ctypes.POINTER(SyscallEvent)).contents
-        pid  = ev.pid
-        comm = ev.comm.decode("utf-8", errors="replace").rstrip("\x00")
-
-        with self._lock:
-            if pid not in self._store:
-                self._store[pid] = _empty_process(pid, comm)
-            self._store[pid]["comm"] = comm
-            self._store[pid]["syscall_events"].append({
-                "nr": ev.syscall_nr,
-                "ts": ev.timestamp_ns,
-            })
-            # Keep only last 2000 events per process (sliding window)
-            if len(self._store[pid]["syscall_events"]) > 2000:
-                self._store[pid]["syscall_events"] = \
-                    self._store[pid]["syscall_events"][-2000:]
 
     def _poll_bpf_maps(self):
         """Periodically sync the BPF hash-map counters into the store."""
@@ -85,14 +73,10 @@ class SyscallCollector:
 
     def start(self):
         self._running = True
-        # page_cnt=256 gives 1 MB ring buffer — reduces "Possibly lost samples"
-        self._bpf["syscall_events"].open_perf_buffer(
-            self._on_syscall_event, page_cnt=256
-        )
 
         def _loop():
             while self._running:
-                self._bpf.perf_buffer_poll(timeout=200)
+                time.sleep(POLL_INTERVAL_S)
                 self._poll_bpf_maps()
 
         t = threading.Thread(target=_loop, daemon=True, name="syscall-collector")
@@ -111,7 +95,6 @@ def _empty_process(pid: int, comm: str) -> dict:
             "clone": 0, "nanosleep": 0, "read": 0, "write": 0,
             "socket": 0, "connect": 0, "send": 0, "recv": 0, "brk": 0,
         },
-        "syscall_events": [],
         "sched": {
             "on_cpu_ns": 0,
             "voluntary_switches": 0,

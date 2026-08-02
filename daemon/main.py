@@ -273,6 +273,10 @@ class EDDMCDaemon:
             kill_cb=lambda pid: terminate(pid),
             update_detection_cb=update_detection_config,
             submit_allowlist_cb=submit_allowlist_to_registry,
+            engine_stats_cb=lambda: {
+                "engine_tracked": engine.last_tracked_count,
+                "engine_scored":  engine.last_scored_count,
+            },
         )
         ipc.start()
         logger.info("IPC server: %s", cfg["daemon"]["socket_path"])

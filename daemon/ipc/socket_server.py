@@ -51,6 +51,7 @@ class _Handler(BaseHTTPRequestHandler):
     kill_cb:       Callable       = staticmethod(lambda pid: None)
     update_detection_cb: Callable = staticmethod(lambda new_values: {})
     submit_allowlist_cb: Callable = staticmethod(lambda path, description: {})
+    engine_stats_cb: Callable = staticmethod(lambda: {"engine_tracked": 0, "engine_scored": 0})
 
     # ── Boilerplate overrides for Unix socket ──────────────────────────────
     def address_string(self):
@@ -80,22 +81,22 @@ class _Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
 
         if path == "/api/status":
-            self._json({
+            body = {
                 "status":  "running",
                 "uptime":  round(time.time() - _START_TIME, 1),
                 "tracked": len(self.process_store),
                 "transport": "unix-socket",
-            })
+            }
+            # RO2 closure round: tracked (post-filter, own_tid/dead/allowlist
+            # excluded) vs. scored (post-prefilter) counts from the most
+            # recent detection scan -- see DetectionEngine._scan().
+            body.update(self.engine_stats_cb())
+            self._json(body)
 
         elif path == "/api/processes":
             with self.store_lock:
                 procs = list(self.process_store.values())
-            # Strip large raw event lists before serialising
-            slim = []
-            for p in procs:
-                entry = {k: v for k, v in p.items() if k != "syscall_events"}
-                slim.append(entry)
-            self._json(slim)
+            self._json(procs)
 
         elif path == "/api/detections":
             self._json(self.detections[-_MAX_HISTORY:])
@@ -190,6 +191,7 @@ class UnixSocketServer:
         kill_cb:       Callable,
         update_detection_cb: Callable = lambda new_values: {},
         submit_allowlist_cb: Callable = lambda path, description: {},
+        engine_stats_cb: Callable = lambda: {"engine_tracked": 0, "engine_scored": 0},
     ):
         # Remove stale socket from previous run
         if os.path.exists(socket_path):
@@ -208,6 +210,7 @@ class UnixSocketServer:
         _Handler.kill_cb       = staticmethod(kill_cb)
         _Handler.update_detection_cb = staticmethod(update_detection_cb)
         _Handler.submit_allowlist_cb = staticmethod(submit_allowlist_cb)
+        _Handler.engine_stats_cb = staticmethod(engine_stats_cb)
 
         self._server      = _UnixHTTPServer(socket_path, _Handler)
         self._socket_path = socket_path

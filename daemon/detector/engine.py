@@ -167,6 +167,13 @@ class DetectionEngine:
         self._temporal:  dict[int, TemporalProfile] = {}
         # pid → set of mitigation tiers already applied
         self._mitigated: dict[int, str] = {}
+        # pid → total_syscalls as of the previous scan (RO2 closure round
+        # pre-filter, see _scan())
+        self._prev_syscall_total: dict[int, int] = {}
+        # Exposed for the overhead report (RO2 Task 1.3): tracked vs. scored
+        # counts from the most recently completed scan.
+        self.last_tracked_count = 0
+        self.last_scored_count  = 0
 
     def start(self):
         self._running = True
@@ -204,6 +211,9 @@ class DetectionEngine:
         allowlist_comm = set(detection_cfg.get("allowlist_comm") or ())
         registry_hashes = self._allowlist_sync.hashes() if self._allowlist_sync else set()
 
+        tracked_count = 0
+        scored_count  = 0
+
         for pid, data in snapshot:
             if pid in own_tids:
                 continue
@@ -219,6 +229,34 @@ class DetectionEngine:
                 on_tamper=self._on_allowlist_tamper,
             ):
                 continue
+
+            tracked_count += 1
+
+            # ── Scoring pre-filter (RO2 closure round, Task 1.2) ───────────
+            # Profiling (Task 1.1) found the store routinely holds thousands
+            # of entries -- almost all host system processes/threads that
+            # made a single syscall once and then went dormant -- and a
+            # live sample found 3497 of 3552 tracked entries (98.4%) had
+            # made precisely zero further syscalls over a 6s window.
+            # Admitting only the active remainder to build_fingerprint() +
+            # Scorer.score() removes nearly all of the detection engine's
+            # own iteration cost with no detection-logic change: weights,
+            # floors and tier boundaries are untouched, and every process
+            # is still scored at least once (its first-ever sighting) and
+            # on every tick afterward that it generates at least one new
+            # syscall. The pool-connection and already-mitigated escape
+            # hatches below exist specifically so a miner cannot evade this
+            # filter by simply going CPU-idle: a confirmed stratum
+            # connection or an active mitigation always forces a real score.
+            total_now = int(data.get("syscall_counts", {}).get("total", 0))
+            prev_total = self._prev_syscall_total.get(pid)
+            self._prev_syscall_total[pid] = total_now
+            delta = None if prev_total is None else total_now - prev_total
+            pool_hits = int(data.get("net", {}).get("mining_pool_hits", 0))
+            if delta is not None and delta <= 0 and pool_hits == 0 and pid not in self._mitigated:
+                continue
+
+            scored_count += 1
             try:
                 # ── Temporal profile ───────────────────────────────────────
                 if pid not in self._temporal:
@@ -319,6 +357,7 @@ class DetectionEngine:
                     logger.exception("Error revoking mitigations for exited pid %d", pid)
             self._mitigated.pop(pid, None)
             self._temporal.pop(pid, None)
+            self._prev_syscall_total.pop(pid, None)
             with self._lock:
                 self._store.pop(pid, None)
 
@@ -332,3 +371,9 @@ class DetectionEngine:
                     except Exception:
                         logger.exception("Error revoking mitigations for exited pid %d", pid)
                 self._mitigated.pop(pid, None)
+        for pid in list(self._prev_syscall_total.keys()):
+            if pid not in live_pids:
+                del self._prev_syscall_total[pid]
+
+        self.last_tracked_count = tracked_count
+        self.last_scored_count  = scored_count

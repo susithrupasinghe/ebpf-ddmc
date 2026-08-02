@@ -64,16 +64,6 @@ struct syscall_counts {
 
 BPF_HASH(syscall_stats, u32, struct syscall_counts, MAX_PIDS);
 
-struct syscall_event {
-    u32 pid;
-    u32 uid;
-    u64 syscall_nr;
-    u64 timestamp_ns;
-    char comm[TASK_COMM_LEN];
-};
-
-BPF_PERF_OUTPUT(syscall_events);
-
 TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
     u32 pid = bpf_get_current_pid_tgid() >> 32;
     u32 uid = bpf_get_current_uid_gid() & 0xFFFFFFFF;
@@ -103,14 +93,6 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
     else if (nr == SYS_SENDTO)    c->send++;
     else if (nr == SYS_RECVFROM)  c->recv++;
     else if (nr == SYS_BRKMEM)    c->brk++;
-
-    struct syscall_event ev = {};
-    ev.pid = pid;
-    ev.uid = uid;
-    ev.syscall_nr = nr;
-    ev.timestamp_ns = bpf_ktime_get_ns();
-    bpf_get_current_comm(&ev.comm, sizeof(ev.comm));
-    syscall_events.perf_submit(args, &ev, sizeof(ev));
 
     return 0;
 }
