@@ -1,0 +1,49 @@
+{
+  "note": "RO2 closure round Task 1.3: before/after overhead comparison, 3 trials x 60s per condition (all 4), same host. BEFORE figures are the prior rounds own validated numbers (overhead_full_summary_20260802T022728.json). AFTER figures are from this round, post scoring-pre-filter + dead-eBPF-channel removal.",
+  "host_note": "condition-1 system baseline this round was noisier than the prior round (36.1% vs 7.0% of one core) -- disclosed, not hidden. daemon_cpu_pct_mean (conditions 2-4) is a per-process psutil measurement, isolated from system-wide load, so it remains a valid before/after comparison despite the noisier baseline.",
+  "before": {
+    "1_daemon_stopped_baseline": {
+      "system_cpu_pct_one_core_mean": 6.977333333333332
+    },
+    "2_daemon_running_idle": {
+      "daemon_cpu_pct_mean": 163.58700000000002,
+      "daemon_cpu_pct_sd": 2.7178529925087744,
+      "daemon_rss_mb_mean": 232.7871875
+    },
+    "3_daemon_running_benign_workload": {
+      "daemon_cpu_pct_mean": 153.27666666666667,
+      "daemon_rss_mb_mean": 234.8772135416667
+    },
+    "4_daemon_running_xmrig_active": {
+      "daemon_cpu_pct_mean": 95.72666666666667,
+      "daemon_rss_mb_mean": 228.6745659722222
+    }
+  },
+  "after": {
+    "1_daemon_stopped_baseline": {
+      "system_cpu_pct_one_core_mean": 36.10444444444445
+    },
+    "2_daemon_running_idle": {
+      "daemon_cpu_pct_mean": 66.18555555555555,
+      "daemon_cpu_pct_sd": 0.6403374881774709,
+      "daemon_rss_mb_mean": 219.0714626736111
+    },
+    "3_daemon_running_benign_workload": {
+      "daemon_cpu_pct_mean": 63.99555555555556,
+      "daemon_rss_mb_mean": 217.60282118055557
+    },
+    "4_daemon_running_xmrig_active": {
+      "daemon_cpu_pct_mean": 54.87055555555556,
+      "daemon_rss_mb_mean": 214.13832465277778
+    }
+  },
+  "ro2_pass_criterion": {
+    "max_idle_cpu_pct_one_core": 25.0,
+    "max_idle_rss_mb": 150.0
+  },
+  "ro2_achieved": {
+    "idle_cpu_pct_one_core": 66.18555555555555,
+    "idle_rss_mb": 219.0714626736111
+  },
+  "ro2_met": false
+}

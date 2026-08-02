@@ -1,0 +1,7 @@
+{
+  "system_cpu_pct_one_core_mean": 90.74666666666667,
+  "daemon_cpu_pct_mean": 65.28,
+  "daemon_rss_mb_mean": 219.10546875,
+  "trial": 3,
+  "workload": "none (idle)"
+}

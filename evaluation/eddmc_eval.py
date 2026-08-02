@@ -683,6 +683,174 @@ def _sample_system_cpu(duration_s, n_cores):
     return samples
 
 
+def _find_daemon_pid():
+    """The exact python3 process running daemon/main.py -- pgrep -f also
+    matches the sudo wrapper and setuid-child in the chain, so this filters
+    to comm=='python3' specifically (same convention noted in project
+    history for the archived measure_daemon_overhead.py)."""
+    out = _run(["pgrep", "-f", "daemon/main.py"])
+    for pid_s in out.splitlines():
+        pid_s = pid_s.strip()
+        if not pid_s:
+            continue
+        try:
+            with open(f"/proc/{pid_s}/comm") as f:
+                comm = f.read().strip()
+        except OSError:
+            continue
+        if comm == "python3":
+            return int(pid_s)
+    return None
+
+
+def _measure_daemon_trial(pid, duration_s, n_cores):
+    """One trial: sample the daemon pid's cpu_percent()/rss and system-wide
+    CPU once per second for duration_s, return per-trial means. Per-process
+    cpu_percent uses the same per-core-additive convention as the rest of
+    this project (100% = one core saturated)."""
+    import psutil
+    proc = psutil.Process(pid)
+    proc.cpu_percent(interval=None)  # prime -- first call always returns 0.0
+    psutil.cpu_percent(interval=None)
+    daemon_samples, system_samples, rss_samples = [], [], []
+    end = time.time() + duration_s
+    while time.time() < end:
+        time.sleep(1.0)
+        daemon_samples.append(proc.cpu_percent(interval=None))
+        system_samples.append(psutil.cpu_percent(interval=None) * n_cores)
+        rss_samples.append(proc.memory_info().rss / (1024 * 1024))
+    return {
+        "system_cpu_pct_one_core_mean": sum(system_samples) / len(system_samples),
+        "daemon_cpu_pct_mean": sum(daemon_samples) / len(daemon_samples),
+        "daemon_rss_mb_mean": sum(rss_samples) / len(rss_samples),
+    }
+
+
+def _mean_sd(vals):
+    n = len(vals)
+    mean = sum(vals) / n
+    var = sum((v - mean) ** 2 for v in vals) / n if n > 1 else 0.0
+    return mean, var ** 0.5
+
+
+def cmd_overhead_condition(args):
+    """Automated conditions 1-4: daemon stopped / idle / + benign workload /
+    + xmrig, N trials of duration_s each, sampling the daemon's own cpu%/rss
+    (conditions 2-4) plus system-wide CPU every second via psutil. Condition
+    label and optional workload are launched here so a single command
+    produces one trial; call once per trial (trial index in the output
+    filename) so a crash mid-run loses at most one trial, matching this
+    project's established chunking convention."""
+    n_cores = os.cpu_count()
+
+    if args.condition == "1":
+        ps_out = _run(["pgrep", "-f", "daemon/main.py"])
+        if ps_out.strip():
+            print("[overhead] a daemon/main.py process is running -- condition 1 requires it "
+                  "stopped.", file=sys.stderr)
+            sys.exit(1)
+        print(f"[overhead] condition=1 (daemon stopped) trial={args.trial_index} "
+              f"duration={args.duration}s")
+        import psutil
+        psutil.cpu_percent(interval=None)
+        samples = []
+        end = time.time() + args.duration
+        while time.time() < end:
+            time.sleep(1.0)
+            samples.append(psutil.cpu_percent(interval=None) * n_cores)
+        trial = {"system_cpu_pct_one_core_mean": sum(samples) / len(samples),
+                 "daemon_cpu_pct_mean": 0.0, "daemon_rss_mb_mean": 0.0, "trial": args.trial_index}
+        print(f"[overhead] condition=1 trial={args.trial_index}: {json.dumps(trial)}")
+        out_path = final_path("overhead", f"condition1_t{args.trial_index}", ext="json")
+        with open(out_path, "w") as f:
+            json.dump({**trial, "workload": "none (daemon stopped)"}, f, indent=2)
+        print(f"[overhead] wrote {out_path}")
+        return
+
+    pid = _find_daemon_pid()
+    if pid is None:
+        print("[overhead] no daemon/main.py python3 process found -- start the daemon first.",
+              file=sys.stderr)
+        sys.exit(1)
+    findings = check_single_daemon_instance()
+    print(f"[overhead] condition={args.condition} daemon pid={pid} dry_run={findings.get('dry_run')} "
+          f"trial={args.trial_index} duration={args.duration}s")
+
+    workload_proc = None
+    listener = None
+    workload_desc = "none (idle)"
+    if args.condition == "3":
+        workload_desc = f"openssl speed (benign CPU load), duration={args.duration}s"
+        workload_proc = subprocess.Popen(
+            ["openssl", "speed", "-seconds", str(int(args.duration) + 5), "sha256"],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    elif args.condition == "4":
+        listener = MockStratumListener(mode="minimal_handshake")
+        listener.start()
+        xmrig_argv = ["/usr/bin/xmrig", "--randomx-mode=light", "--no-color",
+                      "-o", "127.0.0.1:3333", "-u", "mockwallet", "-p", "x"]
+        workload_desc = f"xmrig via mock stratum: {' '.join(xmrig_argv)}"
+        workload_proc = subprocess.Popen(xmrig_argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    if workload_proc is not None:
+        time.sleep(3)  # let the workload ramp up before sampling starts
+
+    trial = _measure_daemon_trial(pid, args.duration, n_cores)
+    trial["trial"] = args.trial_index
+
+    if workload_proc is not None:
+        workload_proc.kill()
+        try:
+            workload_proc.wait(timeout=5)
+        except Exception:
+            pass
+    if listener is not None:
+        listener.stop()
+
+    print(f"[overhead] condition={args.condition} trial={args.trial_index}: {json.dumps(trial)}")
+    out_path = final_path("overhead", f"condition{args.condition}_t{args.trial_index}", ext="json")
+    with open(out_path, "w") as f:
+        json.dump({**trial, "workload": workload_desc}, f, indent=2)
+    print(f"[overhead] wrote {out_path}")
+
+
+def cmd_overhead_summarize(args):
+    """Aggregate the per-trial condition{N}_t{i}.json files already written
+    by `overhead-condition` into the same summary schema this project has
+    used throughout (mean/SD across trials)."""
+    import glob
+    files = sorted(glob.glob(os.path.join(FINAL_DIR, f"overhead_condition{args.condition}_t*.json")))
+    if not files:
+        print(f"[overhead] no overhead_condition{args.condition}_t*.json files found", file=sys.stderr)
+        sys.exit(1)
+    trials = []
+    for f in files:
+        with open(f) as fh:
+            trials.append(json.load(fh))
+    daemon_mean, daemon_sd = _mean_sd([t["daemon_cpu_pct_mean"] for t in trials])
+    system_mean, _ = _mean_sd([t["system_cpu_pct_one_core_mean"] for t in trials])
+    rss_mean, rss_sd = _mean_sd([t["daemon_rss_mb_mean"] for t in trials])
+    summary = {
+        "condition": args.condition,
+        "workload": trials[0].get("workload", ""),
+        "trials": trials,
+        "duration_s_per_trial": args.duration,
+        "n_trials": len(trials),
+        "daemon_cpu_mean_of_means_pct": daemon_mean,
+        "daemon_cpu_sd_pct": daemon_sd,
+        "daemon_rss_mb_mean": rss_mean,
+        "daemon_rss_mb_sd": rss_sd,
+        "system_cpu_mean_of_means_pct_one_core": system_mean,
+    }
+    print(f"[overhead] condition={args.condition} summary: n={len(trials)} "
+          f"daemon_cpu_mean={daemon_mean:.2f}% sd={daemon_sd:.2f}% rss_mean={rss_mean:.1f}MB")
+    out_path = final_path("overhead", f"condition{args.condition}_summary", ext="json")
+    with open(out_path, "w") as fh:
+        json.dump(summary, fh, indent=2)
+    print(f"[overhead] wrote {out_path}")
+
+
 def cmd_overhead(args):
     n_cores = os.cpu_count()
     print(f"[overhead] quietness check: sampling {args.quiet_check_s}s with daemon stopped...")
@@ -2046,6 +2214,17 @@ def main():
     p.add_argument("--duration", type=float, default=300.0)
     p.add_argument("--quiet-check-s", type=float, default=60.0)
     p.set_defaults(func=cmd_overhead)
+
+    p = sub.add_parser("overhead-condition")
+    p.add_argument("--condition", required=True, choices=["1", "2", "3", "4"])
+    p.add_argument("--trial-index", type=int, required=True)
+    p.add_argument("--duration", type=float, default=60.0)
+    p.set_defaults(func=cmd_overhead_condition)
+
+    p = sub.add_parser("overhead-summarize")
+    p.add_argument("--condition", required=True, choices=["1", "2", "3", "4"])
+    p.add_argument("--duration", type=float, default=60.0)
+    p.set_defaults(func=cmd_overhead_summarize)
 
     p = sub.add_parser("capture")
     p.add_argument("--track", required=True)

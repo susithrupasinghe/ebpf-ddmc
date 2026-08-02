@@ -1,0 +1,7 @@
+{
+  "system_cpu_pct_one_core_mean": 248.26000000000002,
+  "daemon_cpu_pct_mean": 51.43666666666666,
+  "daemon_rss_mb_mean": 214.0138671875,
+  "trial": 2,
+  "workload": "xmrig via mock stratum: /usr/bin/xmrig --randomx-mode=light --no-color -o 127.0.0.1:3333 -u mockwallet -p x"
+}
