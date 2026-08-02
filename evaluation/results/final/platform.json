@@ -1,33 +1,17 @@
 {
-  "captured_at_unix": 1785612955.6801157,
+  "captured_at_unix": 1785645476.4905078,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
   "cpu_count_logical": 4,
-  "mem_total_kb": 3462100,
+  "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "f275788b4f7c27951d4422c93f52edd00f91bb38",
+    "sha": "442d36d55c7237abbb1e0c88f8e99791db22b496",
     "dirty": true,
     "dirty_files": [
-      "R  evaluation/build_ablation.py -> evaluation/archive/build_ablation.py",
-      "R  evaluation/build_confusion_matrix_v2.py -> evaluation/archive/build_confusion_matrix_v2.py",
-      "R  evaluation/build_feature_contributions.py -> evaluation/archive/build_feature_contributions.py",
-      "R  evaluation/build_figures.py -> evaluation/archive/build_figures.py",
-      "R  evaluation/build_mitigation_effect.py -> evaluation/archive/build_mitigation_effect.py",
-      "R  evaluation/build_postfix_comparison.py -> evaluation/archive/build_postfix_comparison.py",
-      "R  evaluation/capture_platform.py -> evaluation/archive/capture_platform.py",
-      "R  evaluation/compute_confusion_matrix.py -> evaluation/archive/compute_confusion_matrix.py",
-      "R  evaluation/generate_report.py -> evaluation/archive/generate_report.py",
-      "R  evaluation/measure_mitigation_effect_v2.py -> evaluation/archive/measure_mitigation_effect_v2.py",
-      "R  evaluation/render_terminal_screenshots.py -> evaluation/archive/render_terminal_screenshots.py",
-      "R  evaluation/replay_scorer.py -> evaluation/archive/replay_scorer.py",
-      "R  evaluation/results_capture.py -> evaluation/archive/results_capture.py",
-      "R  evaluation/run_all.sh -> evaluation/archive/run_all.sh",
-      "R  evaluation/verify_sched_fix.py -> evaluation/archive/verify_sched_fix.py",
-      "?? \"Eddmc final round prompt.md\"",
-      "?? evaluation/eddmc_eval.py",
-      "?? evaluation/results/final/"
+      "M daemon/fingerprint/packager.py",
+      "?? \"Eddmc closure round prompt.md\""
     ]
   }
 }

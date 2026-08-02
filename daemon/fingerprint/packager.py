@@ -33,7 +33,11 @@ FEATURE_NAMES = [
     "io_ratio",
     "nanosleep_ratio",
     "cpu_bound_ratio",
-    "thread_density",
+    "thread_cpu_ratio",  # was mislabelled "thread_density" -- feature_vector() below computes
+                         # min(thread_cpu_ratio, 2.0), the raw [0,2] ratio, NOT the dissertation's
+                         # normalised [0,1] thread_density (= thread_cpu_ratio / 2.0). Renamed to
+                         # match what is actually submitted, rather than changing the value and
+                         # risking inconsistency with any fingerprint already in the registry.
     "cpu_percent",
     "randomx_signature",
     "pool_hit",
