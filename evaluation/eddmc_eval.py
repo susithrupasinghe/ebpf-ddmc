@@ -37,12 +37,15 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.request
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
 
 from daemon.detector.fingerprint import build as build_fingerprint, TemporalProfile  # noqa: E402
 from daemon.detector.scorer import Scorer, DEFAULT_WEIGHTS  # noqa: E402
+from daemon.fingerprint.packager import feature_vector as fp_feature_vector  # noqa: E402
+from daemon.fingerprint.matcher import _cosine as fp_cosine  # noqa: E402
 
 RESULTS_DIR = os.path.join(REPO_ROOT, "evaluation", "results")
 FINAL_DIR = os.path.join(RESULTS_DIR, "final")
@@ -1258,14 +1261,239 @@ def cmd_registry(args):
         print(f"[registry] wrote {out_path}")
 
     elif args.mode == "two-node":
-        print("[registry] two-node experiment requested but a second host was not available in "
-              "this environment. Per instructions: simulating Node B by clearing the daemon's "
-              "process store and fingerprint cache, and reporting this plainly as a same-host "
-              "simulation rather than a true cross-host test.")
-        out_path = final_path("registry", "two_node", ext="json")
+        # RO7 (closure round, Task 2.2): a second physical host was not
+        # available in this environment. Node B is simulated by restarting
+        # the daemon (the user does this between conditions, since it needs
+        # sudo and a different config file) -- a fresh process wipes
+        # engine.py's in-memory self._temporal dict and self._store, so the
+        # new xmrig launched below has no detection history, exactly as a
+        # genuinely independent host would. Disclosed here plainly: this is
+        # a same-host simulation, not a true cross-host test.
+        if args.condition not in ("enabled", "disabled") or args.trial_index is None:
+            print("[registry] two-node mode requires --condition {enabled,disabled} and "
+                  "--trial-index", file=sys.stderr)
+            sys.exit(1)
+
+        findings = check_single_daemon_instance()
+        fp_cfg = (findings.get("config") or {}).get("fingerprint_registry", {}) or {}
+        live_enabled = bool(fp_cfg.get("enabled"))
+        expected = (args.condition == "enabled")
+        if live_enabled != expected:
+            print(f"[registry] REFUSING: requested --condition={args.condition} but the live "
+                  f"daemon's fingerprint_registry.enabled={live_enabled}. Restart the daemon "
+                  f"with a config matching this condition first.", file=sys.stderr)
+            sys.exit(1)
+        print(f"[registry] condition={args.condition} confirmed live "
+              f"(fingerprint_registry.enabled={live_enabled}), trial={args.trial_index}")
+
+        listener = MockStratumListener(mode=args.stratum_mode)
+        listener.start()
+        xmrig_argv = (["/usr/bin/xmrig"] + args.xmrig_args.split()
+                      + ["-o", "127.0.0.1:3333", "-u", "mockwallet", "-p", "x"])
+        print(f"[registry] launching: {' '.join(xmrig_argv)}")
+        proc = subprocess.Popen(xmrig_argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+
+        # Poll until first HIGH-tier-or-above alert for THIS pid, or max_duration / process
+        # exit. Every poll's row is kept (not just the qualifying tick) so a timeout can be
+        # diagnosed from the actual score/confidence curve rather than taken on faith.
+        #
+        # Two related metrics are tracked, not one, because of a real scorer behaviour found
+        # while running this: with fingerprint matching OFF, the sustained-detection weight
+        # can push a process from MEDIUM straight past the whole HIGH band (60-79) to
+        # CRITICAL in a single 5s scan tick (observed: score 55->84 in one tick, confidence
+        # never literally equal to "HIGH" at any poll). With matching ON, the registry
+        # elevation path explicitly caps at HIGH (`result.confidence = "HIGH"`, engine.py),
+        # so it never skips the tier. A strict "confidence == HIGH" metric would therefore
+        # read as a timeout for some disabled-condition trials even though detection (at
+        # HIGH-or-above severity) did happen -- that would misrepresent the comparison, not
+        # correct it. "First HIGH-or-above" is reported as the primary metric for exactly
+        # this reason; "first exactly HIGH" is kept alongside as the literal, disclosed
+        # secondary figure.
+        HIGH_RANK = CONFIDENCE_RANK["HIGH"]
+        start = time.time()
+        elapsed_to_high_exact, score_at_high_exact = None, None
+        elapsed_to_high_or_above, score_at_high_or_above, confidence_at_high_or_above = None, None, None
+        rows = []
+        while True:
+            elapsed = time.time() - start
+            wall_time = time.time()
+            try:
+                procs = daemon_api_get("/api/processes")
+            except Exception as exc:
+                procs = []
+                print(f"[registry] poll failed: {exc}", file=sys.stderr)
+            for p in procs:
+                if p.get("pid") != proc.pid:
+                    continue
+                rows.append(_flatten(p, wall_time, elapsed))
+                conf = p.get("confidence")
+                if conf == "HIGH" and elapsed_to_high_exact is None:
+                    elapsed_to_high_exact, score_at_high_exact = elapsed, p.get("score")
+                if (CONFIDENCE_RANK.get(conf, 0) >= HIGH_RANK and elapsed_to_high_or_above is None):
+                    elapsed_to_high_or_above = elapsed
+                    score_at_high_or_above = p.get("score")
+                    confidence_at_high_or_above = conf
+            if elapsed_to_high_or_above is not None:
+                break
+            if elapsed >= args.max_duration or not _pid_alive(proc.pid):
+                break
+            time.sleep(1.0)
+
+        proc.kill()
+        try:
+            proc.wait(timeout=3)
+        except Exception:
+            pass
+        listener.stop()
+
+        csv_path = final_path("registry", f"twonode_{args.condition}_trial{args.trial_index}")
+        write_csv(rows, csv_path)
+
+        trial = {
+            "condition": args.condition, "trial_index": args.trial_index,
+            "fingerprint_registry_enabled": live_enabled,
+            "elapsed_to_first_high_or_above_s": elapsed_to_high_or_above,
+            "score_at_first_high_or_above": score_at_high_or_above,
+            "confidence_at_first_high_or_above": confidence_at_high_or_above,
+            "elapsed_to_first_high_exact_s": elapsed_to_high_exact,
+            "score_at_first_high_exact": score_at_high_exact,
+            "timed_out": elapsed_to_high_or_above is None,
+            "max_duration_s": args.max_duration, "captured_at_unix": time.time(),
+            "peak_score": max((r["score"] for r in rows), default=0.0),
+            "peak_confidence": max((r["confidence"] for r in rows), key=lambda c: CONFIDENCE_RANK.get(c, 0), default="NONE"),
+            "rows_csv": csv_path,
+        }
+        print(f"[registry] trial result: {json.dumps(trial)}")
+
+        results_path = os.path.join(FINAL_DIR, "registry_timing_trials.json")
+        os.makedirs(FINAL_DIR, exist_ok=True)
+        existing = []
+        if os.path.exists(results_path):
+            with open(results_path) as f:
+                existing = json.load(f)
+        existing = [t for t in existing
+                    if not (t["condition"] == trial["condition"] and t["trial_index"] == trial["trial_index"])]
+        existing.append(trial)
+        with open(results_path, "w") as f:
+            json.dump(existing, f, indent=2)
+        print(f"[registry] appended to {results_path} ({len(existing)} trials recorded so far)")
+
+    elif args.mode == "timing-summary":
+        results_path = os.path.join(FINAL_DIR, "registry_timing_trials.json")
+        if not os.path.exists(results_path):
+            print(f"[registry] no {results_path} -- run two-node trials first.", file=sys.stderr)
+            sys.exit(1)
+        with open(results_path) as f:
+            trials = json.load(f)
+
+        def _stats(vals):
+            n = len(vals)
+            if n == 0:
+                return None
+            mean = sum(vals) / n
+            var = sum((v - mean) ** 2 for v in vals) / n if n > 1 else 0.0
+            return {"n": n, "mean_s": round(mean, 3), "sd_s": round(var ** 0.5, 3), "values": vals}
+
+        # Primary metric: first HIGH-or-above. See the note in the two-node branch above --
+        # without matching, the sustained-detection bonus can jump a process from MEDIUM
+        # straight past the HIGH band to CRITICAL in one scan tick, so a strict
+        # "confidence == HIGH" metric reads several disabled trials as timeouts even though
+        # detection (at HIGH-or-above severity) genuinely happened. Both metrics are reported.
+        by_cond_or_above = {"enabled": [], "disabled": []}
+        by_cond_exact = {"enabled": [], "disabled": []}
+        timeouts_or_above = {"enabled": 0, "disabled": 0}
+        timeouts_exact = {"enabled": 0, "disabled": 0}
+        for t in trials:
+            cond = t["condition"]
+            if t.get("elapsed_to_first_high_or_above_s") is None:
+                timeouts_or_above[cond] += 1
+            else:
+                by_cond_or_above[cond].append(t["elapsed_to_first_high_or_above_s"])
+            if t.get("elapsed_to_first_high_exact_s") is None:
+                timeouts_exact[cond] += 1
+            else:
+                by_cond_exact[cond].append(t["elapsed_to_first_high_exact_s"])
+
+        stats_enabled = _stats(by_cond_or_above["enabled"])
+        stats_disabled = _stats(by_cond_or_above["disabled"])
+        summary = {
+            "primary_metric": "first HIGH-or-above tier alert",
+            "enabled": stats_enabled, "disabled": stats_disabled,
+            "timeouts_high_or_above": timeouts_or_above,
+            "difference_s": (round(stats_disabled["mean_s"] - stats_enabled["mean_s"], 3)
+                             if stats_enabled and stats_disabled else None),
+            "n_trials_total": len(trials),
+            "secondary_metric_exact_high": {
+                "enabled": _stats(by_cond_exact["enabled"]),
+                "disabled": _stats(by_cond_exact["disabled"]),
+                "timeouts": timeouts_exact,
+                "note": "strict confidence=='HIGH' only; disabled-condition trials where the "
+                        "score skipped the HIGH band entirely (MEDIUM->CRITICAL in one tick) "
+                        "show as timed_out here even though HIGH-or-above WAS reached -- see "
+                        "primary_metric above for the meaningful comparison.",
+            },
+        }
+        print(f"[registry] timing summary: {json.dumps(summary, indent=2)}")
+        out_path = final_path("registry", "timing_summary", ext="json")
         with open(out_path, "w") as f:
-            json.dump({"note": "same-host simulation, not a true cross-host test",
-                       "second_host_available": False}, f, indent=2)
+            json.dump(summary, f, indent=2)
+        print(f"[registry] wrote {out_path}")
+
+    elif args.mode == "matcher-fp":
+        # RO7 (closure round, Task 2.3): run the real matcher's cosine-similarity logic
+        # (daemon/fingerprint/matcher.py's own _cosine, imported directly -- not
+        # reimplemented) against every benign observation on record, and report the
+        # actual scores rather than a pass/fail count.
+        url = args.registry_url.rstrip("/") + "/api/v1/fingerprints"
+        try:
+            with urllib.request.urlopen(url, timeout=5) as resp:
+                confirmed = json.loads(resp.read())
+        except Exception as exc:
+            print(f"[registry] could not fetch confirmed fingerprints from {url}: {exc}", file=sys.stderr)
+            sys.exit(1)
+        print(f"[registry] {len(confirmed)} confirmed fingerprints fetched from {url}")
+
+        threshold = 0.85  # matches FingerprintMatcher's default
+        per_track = {}
+        for label, path, _gt in POSTFIX_BENIGN_TRACKS:
+            if not path or not os.path.exists(path):
+                per_track[label] = {"error": "no recaptured file for this track"}
+                continue
+            rows = _load_rows(path)
+            replayed = replay_track(rows)
+            sims = []
+            for row, result, cpu_used, cpu_exact in replayed:
+                vec = fp_feature_vector(result.fingerprint)
+                best = max((fp_cosine(vec, entry.get("feature_vector", [])) for entry in confirmed),
+                           default=0.0)
+                sims.append(best)
+            n_above = sum(1 for s in sims if s >= threshold)
+            per_track[label] = {
+                "n_observations": len(sims),
+                "max_similarity": round(max(sims), 4) if sims else None,
+                "mean_similarity": round(sum(sims) / len(sims), 4) if sims else None,
+                "min_similarity": round(min(sims), 4) if sims else None,
+                "n_at_or_above_threshold": n_above,
+                "threshold": threshold,
+            }
+            print(f"[registry] {label}: n={len(sims)} max_sim={per_track[label]['max_similarity']} "
+                  f"mean_sim={per_track[label]['mean_similarity']} n_above_threshold={n_above}")
+
+        total_obs = sum(v.get("n_observations", 0) for v in per_track.values() if "error" not in v)
+        total_above = sum(v.get("n_at_or_above_threshold", 0) for v in per_track.values() if "error" not in v)
+        result = {
+            "confirmed_fingerprints_checked_against": len(confirmed),
+            "threshold": threshold,
+            "per_track": per_track,
+            "total_benign_observations": total_obs,
+            "total_at_or_above_threshold": total_above,
+            "any_benign_elevated": total_above > 0,
+        }
+        print(f"[registry] TOTAL: {total_obs} benign observations, {total_above} at/above "
+              f"threshold {threshold} -- any_benign_elevated={result['any_benign_elevated']}")
+        out_path = final_path("registry", "matcher_fp", ext="json")
+        with open(out_path, "w") as f:
+            json.dump(result, f, indent=2)
         print(f"[registry] wrote {out_path}")
 
 
@@ -1787,7 +2015,14 @@ def main():
     p.set_defaults(func=cmd_baseline)
 
     p = sub.add_parser("registry")
-    p.add_argument("--mode", default="gate-replay", choices=["gate-replay", "two-node"])
+    p.add_argument("--mode", default="gate-replay",
+                    choices=["gate-replay", "two-node", "timing-summary", "matcher-fp"])
+    p.add_argument("--registry-url", default="http://127.0.0.1:8321")
+    p.add_argument("--condition", choices=["enabled", "disabled"], default=None)
+    p.add_argument("--trial-index", type=int, default=None)
+    p.add_argument("--max-duration", type=float, default=120.0)
+    p.add_argument("--stratum-mode", default="minimal_handshake", choices=["bare_hold", "minimal_handshake"])
+    p.add_argument("--xmrig-args", default="--randomx-mode=light --no-color")
     p.set_defaults(func=cmd_registry)
 
     p = sub.add_parser("report")

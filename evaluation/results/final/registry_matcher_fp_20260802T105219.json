@@ -1,0 +1,25 @@
+{
+  "confirmed_fingerprints_checked_against": 7,
+  "threshold": 0.85,
+  "per_track": {
+    "benign_openssl (recaptured)": {
+      "n_observations": 1072,
+      "max_similarity": 0.6866,
+      "mean_similarity": 0.5867,
+      "min_similarity": 0.5075,
+      "n_at_or_above_threshold": 0,
+      "threshold": 0.85
+    },
+    "benign_gcc_compile (recaptured)": {
+      "n_observations": 33907,
+      "max_similarity": 0.7115,
+      "mean_similarity": 0.5219,
+      "min_similarity": 0.5153,
+      "n_at_or_above_threshold": 0,
+      "threshold": 0.85
+    }
+  },
+  "total_benign_observations": 34979,
+  "total_at_or_above_threshold": 0,
+  "any_benign_elevated": false
+}
