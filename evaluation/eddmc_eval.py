@@ -1084,11 +1084,23 @@ def cmd_baseline(args):
                             fp_tracks[track] = fp_tracks.get(track, 0) + 1
                         else:
                             tn += 1
-                precision = tp / (tp + fp) if (tp + fp) else float("nan")
-                recall = tp / (tp + fn_) if (tp + fn_) else float("nan")
+                # Zero-division convention (matches sklearn's zero_division=0):
+                # a baseline that never fires a positive prediction has
+                # precision=0 and recall=0, not NaN. Found while debugging B3
+                # (RO6 closure round, Task 3.2): B3's io_ratio<0.02 condition
+                # never evaluates true within these mining tracks' capture
+                # durations (io_ratio decays 0.14->0.075 over 300s on
+                # xmrig_postfix.csv but never crosses 0.02 -- read/write
+                # counters are correctly populated and non-zero throughout,
+                # this is a genuine threshold-vs-duration mismatch in the
+                # baseline design, not an unpopulated-counter bug), so TP=FP=0
+                # every sweep point and the old NaN-on-0/0 convention made
+                # every metric NaN instead of reporting the real 0.0 recall.
+                precision = tp / (tp + fp) if (tp + fp) else 0.0
+                recall = tp / (tp + fn_) if (tp + fn_) else 0.0
                 f1 = (2 * precision * recall / (precision + recall)
-                      if (precision == precision and recall == recall and (precision + recall) > 0) else float("nan"))
-                specificity = tn / (tn + fp) if (tn + fp) else float("nan")
+                      if (precision + recall) > 0 else 0.0)
+                specificity = tn / (tn + fp) if (tn + fp) else 0.0
                 row = {"baseline": name, "T": T, "D": D, "n": tp + fn_ + tn + fp,
                        "TP": tp, "FN": fn_, "TN": tn, "FP": fp,
                        "precision": precision, "recall": recall, "f1": f1,
@@ -1098,11 +1110,33 @@ def cmd_baseline(args):
                     best = row
         return sweep_rows, best
 
+    # EDDMC's own scorer, run through the identical (label, pid) groups via
+    # the same replay_track() ported-scorer path used elsewhere in this file
+    # -- not the older confusion_matrix_v2 numbers, which were computed on a
+    # different/mixed pre-fix track set. T/D are unused (the real scorer has
+    # no such parameters) but the signature is kept compatible with
+    # run_baseline() so EDDMC slots into the exact same TP/FN/TN/FP/fp_by_track
+    # accounting as every other baseline, on the exact same data (RO6 Task 3.3:
+    # "alongside EDDMC on the same data"). MEDIUM+ matches the Reading
+    # 1/Reading 3 convention already established in CH6_DATA_EXTRACTION.md.
+    _replay_cache = {}
+
+    def eddmc_flags(prows, series, T, D):
+        key = id(prows)
+        if key not in _replay_cache:
+            replayed = replay_track(prows)
+            _replay_cache[key] = [
+                CONFIDENCE_RANK.get(res.confidence, 0) >= CONFIDENCE_RANK["MEDIUM"]
+                for _, res, _, _ in replayed
+            ]
+        return _replay_cache[key]
+
     results = {}
     for name, fn in [
         ("B1_cpu_threshold", lambda prows, series, T, D: baseline_b1(prows, series, T, D)),
         ("B2_cpu_thread", lambda prows, series, T, D: baseline_b2(prows, series, T, D, n_cores)),
         ("B3_cpu_io", lambda prows, series, T, D: baseline_b3(prows, series, T, D)),
+        ("EDDMC_scorer_replay", eddmc_flags),
     ]:
         sweep_all, best_all = run_baseline(name, fn, all_grouped)
         sweep_ss, best_ss = run_baseline(name, fn, ss_grouped)
