@@ -1353,6 +1353,172 @@ def gate_conditions(fp, confidence, sustained_s, pool_hits):
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# Subcommand: confusion-matrix (re-evaluation Task 2)
+# ══════════════════════════════════════════════════════════════════════════
+# Identical methodology to evaluation/results/confusion_matrix_v2.md: one
+# process at one POLL tick (1s granularity, as the original established) is
+# one observation -- not deduplicated against the daemon's own ~5-10s real
+# scan cadence, matching the original file's own row-count-equals-n practice
+# exactly (verified by inspection: e.g. "xmrig_ground_truth_1M.csv | 287" is
+# that file's literal row count).
+
+V2_CONFUSION_TRACKS = [
+    # (label, glob pattern, ground_truth, category)
+    ("v2_xmrig_fullspeed",        "capture_v2_xmrig_fullspeed_*.csv",        True,  "mining_core"),
+    ("v2_xmrig_renamed",          "capture_v2_xmrig_renamed_*.csv",          True,  "mining_core"),
+    ("v2_xmrig_evasion_1thread",  "capture_v2_xmrig_evasion_1thread_*.csv",  True,  "mining_core"),
+    ("v2_xmrig_upx_packed",       "capture_v2_xmrig_upx_packed_*.csv",       True,  "mining_core"),
+    ("v2_xmrig_4proc_split",      "capture_v2_xmrig_4proc_split_*.csv",      True,  "mining_core"),
+    ("v2_stratum_client_t1",      "capture_v2_stratum_client_t1_*.csv",      True,  "stratum"),
+    ("v2_stratum_client_t2",      "capture_v2_stratum_client_t2_*.csv",      True,  "stratum"),
+    ("v2_stratum_client_t3",      "capture_v2_stratum_client_t3_*.csv",      True,  "stratum"),
+    ("browser_wasm_miner",        "capture_browser_wasm_miner_postfix_*.csv", True, "wasm"),
+    ("v2_benign_openssl_t1",      "capture_v2_benign_openssl_t1_*.csv",      False, "benign"),
+    ("v2_benign_openssl_t2",      "capture_v2_benign_openssl_t2_*.csv",      False, "benign"),
+    ("v2_benign_openssl_t3",      "capture_v2_benign_openssl_t3_*.csv",      False, "benign"),
+    ("v2_benign_gcc_t1",          "capture_v2_benign_gcc_t1_*.csv",          False, "benign"),
+    ("v2_benign_gcc_t2",          "capture_v2_benign_gcc_t2_*.csv",          False, "benign"),
+    ("v2_benign_gcc_t3",          "capture_v2_benign_gcc_t3_*.csv",          False, "benign"),
+]
+
+
+def _confidence_stream(path):
+    """Yield (pid, elapsed_s, confidence_rank) for every row without holding
+    the whole file materialised as dicts -- needed for the multi-hundred-
+    thousand-row gcc-compile-loop tracks."""
+    with open(path, newline="") as f:
+        reader = csv.DictReader(f)
+        for r in reader:
+            yield r["pid"], float(r["elapsed_s"]), CONFIDENCE_RANK.get(r["confidence"], 0)
+
+
+def cmd_confusion_matrix(args):
+    resolved = []
+    for label, pattern, gt, category in V2_CONFUSION_TRACKS:
+        path = _glob_latest(pattern)
+        if not path:
+            print(f"[confusion] WARNING: no file matches {pattern} -- excluding {label}", file=sys.stderr)
+            continue
+        resolved.append((label, path, gt, category))
+
+    # First pass per track: total n, and per-pid ordered rank lists (needed
+    # for Reading 3's steady-state trim). Built once, reused by all 4 readings.
+    track_data = {}
+    for label, path, gt, category in resolved:
+        by_pid = {}
+        n = 0
+        for pid, elapsed_s, rank in _confidence_stream(path):
+            by_pid.setdefault(pid, []).append((elapsed_s, rank))
+            n += 1
+        for pid in by_pid:
+            by_pid[pid].sort(key=lambda t: t[0])
+        track_data[label] = {"path": path, "gt": gt, "category": category, "n": n, "by_pid": by_pid}
+        print(f"[confusion] loaded {label}: n={n} pids={len(by_pid)}")
+
+    def rule_of_three_ucb(fp, n_neg):
+        """95% upper confidence bound on the false-positive rate. Standard
+        rule of three (fp=0): UCB ~= 3/n. For fp>0, uses the Wilson score
+        upper bound (z=1.96) instead, since the rule of three specifically
+        only applies to the zero-events case."""
+        if n_neg == 0:
+            return None
+        p = fp / n_neg
+        if fp == 0:
+            return 3.0 / n_neg
+        z = 1.96
+        denom = 1 + z * z / n_neg
+        centre = p + z * z / (2 * n_neg)
+        margin = z * ((p * (1 - p) / n_neg + z * z / (4 * n_neg * n_neg)) ** 0.5)
+        return (centre + margin) / denom
+
+    def compute_reading(name, threshold_rank, track_filter, steady_state):
+        tp = fn = tn = fp = 0
+        per_track = {}
+        neg_composition = {}
+        for label, data in track_data.items():
+            if not track_filter(data["category"]):
+                continue
+            gt = data["gt"]
+            excluded = 0
+            n_used = 0
+            n_pos_this_threshold = 0
+            for pid, series in data["by_pid"].items():
+                if steady_state:
+                    first_alert = next((i for i, (_, r) in enumerate(series) if r >= CONFIDENCE_RANK["LOW"]), None)
+                    if first_alert is None:
+                        excluded += len(series)
+                        continue
+                    series = series[first_alert:]
+                    excluded += first_alert
+                for _, rank in series:
+                    n_used += 1
+                    fired = rank >= threshold_rank
+                    if fired:
+                        n_pos_this_threshold += 1
+                    if gt:
+                        if fired:
+                            tp += 1
+                        else:
+                            fn += 1
+                    else:
+                        if fired:
+                            fp += 1
+                        else:
+                            tn += 1
+                        neg_composition[label] = neg_composition.get(label, 0) + 1
+            per_track[label] = {"n": n_used, "positive": n_pos_this_threshold, "excluded_pre_detection": excluded}
+
+        precision = tp / (tp + fp) if (tp + fp) else 0.0
+        recall = tp / (tp + fn) if (tp + fn) else 0.0
+        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        n_neg = tn + fp
+        # Distinct from a 0.0 default elsewhere in this file: 0 negative
+        # observations means specificity/FPR are UNDEFINED (no negative class
+        # to evaluate), not "worst possible" -- conflating the two would make
+        # a reading with literally zero benign observations read as a bad
+        # result when it is actually just not computable from this data.
+        specificity = round(tn / n_neg, 4) if n_neg else None
+        fpr = round(fp / n_neg, 4) if n_neg else None
+        ucb = rule_of_three_ucb(fp, n_neg) if n_neg else None
+        total_neg = sum(neg_composition.values())
+        neg_comp_pct = {k: round(v / total_neg * 100, 2) for k, v in neg_composition.items()} if total_neg else {}
+
+        result = {
+            "reading": name, "n": tp + fn + tn + fp,
+            "TP": tp, "FN": fn, "TN": tn, "FP": fp,
+            "precision": round(precision, 4), "recall": round(recall, 4), "f1": round(f1, 4),
+            "specificity": specificity, "false_positive_rate": fpr,
+            "fpr_95_upper_confidence_bound": round(ucb, 6) if ucb is not None else None,
+            "negative_class_composition_pct": neg_comp_pct,
+            "per_track": per_track,
+        }
+        print(f"[confusion] {name}: n={result['n']} TP={tp} FN={fn} TN={tn} FP={fp} "
+              f"precision={precision:.4f} recall={recall:.4f} f1={f1:.4f} "
+              f"FPR_95_UCB={result['fpr_95_upper_confidence_bound']}")
+        return result
+
+    all_cat = lambda c: True
+    mining_only_cat = lambda c: c in ("mining_core", "benign")
+
+    readings = {
+        "reading1_all_tracks_medium_plus": compute_reading(
+            "Reading 1: all positive tracks, MEDIUM+", CONFIDENCE_RANK["MEDIUM"], all_cat, steady_state=False),
+        "reading2_mining_only_medium_plus": compute_reading(
+            "Reading 2: mining tracks only (excl. stratum/WASM), MEDIUM+", CONFIDENCE_RANK["MEDIUM"],
+            mining_only_cat, steady_state=False),
+        "reading3_steady_state_medium_plus": compute_reading(
+            "Reading 3: steady state, MEDIUM+", CONFIDENCE_RANK["MEDIUM"], all_cat, steady_state=True),
+        "reading4_any_alert_low_plus": compute_reading(
+            "Reading 4: any alert tier, LOW+", CONFIDENCE_RANK["LOW"], all_cat, steady_state=False),
+    }
+
+    out_path = final_path("confusion_matrix", "v2", ext="json")
+    with open(out_path, "w") as f:
+        json.dump(readings, f, indent=2)
+    print(f"[confusion] wrote {out_path}")
+
+
 def cmd_registry(args):
     print(f"[registry] mode={args.mode}")
     if args.mode == "gate-replay":
@@ -2266,6 +2432,9 @@ def main():
     p = sub.add_parser("baseline")
     p.add_argument("--replay-dir", default=RESULTS_DIR)
     p.set_defaults(func=cmd_baseline)
+
+    p = sub.add_parser("confusion-matrix")
+    p.set_defaults(func=cmd_confusion_matrix)
 
     p = sub.add_parser("registry")
     p.add_argument("--mode", default="gate-replay",
