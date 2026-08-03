@@ -1519,6 +1519,177 @@ def cmd_confusion_matrix(args):
     print(f"[confusion] wrote {out_path}")
 
 
+# ══════════════════════════════════════════════════════════════════════════
+# Subcommand: ablation (re-evaluation Task 3)
+# ══════════════════════════════════════════════════════════════════════════
+# evaluation/replay_scorer.py was archived during the "final round"
+# consolidation and no longer exists at that path; its logic lives on here
+# as replay_row()/replay_track() (already used by cmd_registry's gate-replay
+# and cmd_baseline's EDDMC-vs-baseline comparison), which is what this
+# subcommand uses -- the single-entry-point equivalent of what the prompt
+# asked for.
+
+V2_MINING_TRACK_FILES = [
+    ("v2_xmrig_fullspeed",       "capture_v2_xmrig_fullspeed_*.csv"),
+    ("v2_xmrig_renamed",         "capture_v2_xmrig_renamed_*.csv"),
+    ("v2_xmrig_evasion_1thread", "capture_v2_xmrig_evasion_1thread_*.csv"),
+    ("v2_xmrig_upx_packed",      "capture_v2_xmrig_upx_packed_*.csv"),
+    ("v2_xmrig_4proc_split",     "capture_v2_xmrig_4proc_split_*.csv"),
+    ("v2_stratum_client_t1",     "capture_v2_stratum_client_t1_*.csv"),
+    ("browser_wasm_miner",       "capture_browser_wasm_miner_postfix_*.csv"),
+]
+
+# Raw-evidence fields to zero per ablation group, applied to row_to_proc_data()'s
+# output before build_fingerprint() -- disables the WEIGHT's condition at its
+# source (not just the weight itself), and for scratchpad/pool_connection this
+# also disables the hard-evidence floor that evidence would otherwise trigger.
+def _zero_evidence(proc_data, group_keys):
+    pd = json.loads(json.dumps(proc_data))  # cheap deep copy
+    force_cpu_zero = False
+    force_cpu_max = False
+    if "futex_strong" in group_keys or "futex_moderate" in group_keys:
+        pd["syscall_counts"]["futex"] = 0
+    if "compute_pure" in group_keys:
+        total = max(pd["syscall_counts"]["total"], 1)
+        pd["syscall_counts"]["read"] = total  # forces io_ratio to ~1.0, well above the 0.02 cutoff
+    if "thread_full_sat" in group_keys or "thread_partial_sat" in group_keys:
+        pd["sched"]["thread_count"] = 1
+    if "cpu_high" in group_keys:
+        force_cpu_zero = True
+    if "scratchpad_exact" in group_keys or "scratchpad_weak" in group_keys:
+        pd["mem"]["scratchpad_allocs"] = 0
+    if "huge_pages" in group_keys:
+        pd["mem"]["huge_page_requests"] = 0
+    if "cpu_bound_strong" in group_keys or "cpu_bound_moderate" in group_keys:
+        pd["sched"]["involuntary_switches"] = 0
+        pd["sched"]["voluntary_switches"] = max(pd["sched"]["voluntary_switches"], 1)
+    if "pool_connection" in group_keys:
+        pd["net"]["mining_pool_hits"] = 0
+    return pd, force_cpu_zero
+
+
+def _replay_row_ablated(row, group_keys=None, zero_floors=False):
+    """Like replay_row(), but optionally zeros the raw evidence for the given
+    ablation group keys (evidence ablation) and/or the two hard-evidence
+    floors (for the floor-excluded weighted sum)."""
+    proc_data = row_to_proc_data(row)
+    force_cpu_zero = False
+    if group_keys:
+        proc_data, force_cpu_zero = _zero_evidence(proc_data, group_keys)
+    temporal = TemporalProfile(
+        first_seen=0.0,
+        suspicious_ticks=0 if (group_keys and ("sustained_medium" in group_keys or "sustained_high" in group_keys))
+                          else int(float(row.get("ticks", 0))),
+        age_seconds=float(row["elapsed_s"]),
+    )
+    fp = build_fingerprint(int(float(row["pid"])), proc_data, temporal)
+    cpu_recovered = parse_cpu_percent(row.get("reasons", ""))
+    fp.parallelism.cpu_percent = 0.0 if force_cpu_zero else (cpu_recovered if cpu_recovered is not None else _ALIVE_DEFAULT_CPU_PERCENT)
+    fp.memory.scratchpad_huge_allocs = 0 if (group_keys and ("scratchpad_exact" in group_keys or "scratchpad_weak" in group_keys)) \
+        else reconstruct_scratchpad_huge_allocs(row)
+    cfg = {}
+    if zero_floors:
+        cfg["pool_floor"] = 0
+        cfg["scratchpad_floor"] = 0
+    scorer = Scorer(cfg)
+    return scorer.score(fp)
+
+
+def cmd_ablation(args):
+    results = {"replay_verification": {}, "weight_only_ablation": {}, "evidence_ablation": {},
+               "weighted_sum_excluding_floors": {}, "per_feature_contribution_at_peak": {}}
+
+    track_rows = {}
+    for label, pattern in V2_MINING_TRACK_FILES:
+        path = _glob_latest(pattern)
+        if not path:
+            print(f"[ablation] WARNING: no file for {pattern}, skipping {label}", file=sys.stderr)
+            continue
+        track_rows[label] = _load_rows(path)
+
+    # ── Replay verification: replayed peak must match the daemon's own recorded peak ──
+    peak_rows = {}
+    for label, rows in track_rows.items():
+        recorded_peak = max(float(r["score"]) for r in rows)
+        replayed = replay_track(rows)
+        replayed_peak_result, replayed_peak_row = max(
+            ((res, r) for r, res, _, _ in replayed), key=lambda t: t[0].score)
+        match = abs(replayed_peak_result.score - recorded_peak) < 0.01
+        results["replay_verification"][label] = {
+            "recorded_peak": recorded_peak, "replayed_peak": replayed_peak_result.score,
+            "matches": match,
+        }
+        peak_rows[label] = replayed_peak_row
+        print(f"[ablation] {label}: recorded_peak={recorded_peak} replayed_peak={replayed_peak_result.score} "
+              f"matches={match}")
+
+    verified_tracks = {l: r for l, r in peak_rows.items() if results["replay_verification"][l]["matches"]}
+    if len(verified_tracks) < len(peak_rows):
+        print(f"[ablation] WARNING: {len(peak_rows) - len(verified_tracks)} track(s) failed replay "
+              f"verification -- excluded from ablation below, not silently included.", file=sys.stderr)
+
+    # ── Weight-only and evidence ablation, at each track's own verified peak row ──
+    for group_name, group_keys in ABLATION_GROUPS.items():
+        results["weight_only_ablation"][group_name] = {}
+        results["evidence_ablation"][group_name] = {}
+        weight_overrides = {k: 0 for k in group_keys}
+        for label, peak_row in verified_tracks.items():
+            baseline_score = float(peak_row["score"])
+            baseline_conf = peak_row["confidence"]
+
+            weight_only_result, _, _ = replay_row(peak_row, weight_overrides=weight_overrides)
+            evidence_result = _replay_row_ablated(peak_row, group_keys=group_keys)
+
+            results["weight_only_ablation"][group_name][label] = {
+                "baseline_score": baseline_score, "baseline_confidence": baseline_conf,
+                "ablated_score": weight_only_result.score, "ablated_confidence": weight_only_result.confidence,
+                "delta": round(weight_only_result.score - baseline_score, 2),
+            }
+            results["evidence_ablation"][group_name][label] = {
+                "baseline_score": baseline_score, "baseline_confidence": baseline_conf,
+                "ablated_score": evidence_result.score, "ablated_confidence": evidence_result.confidence,
+                "delta": round(evidence_result.score - baseline_score, 2),
+            }
+        print(f"[ablation] weight-only + evidence ablation done for group: {group_name}")
+
+    # ── Weighted sum excluding floors, at each track's own verified peak row (the
+    # single most important number for the chapter's argument per the prompt) ──
+    for label, peak_row in verified_tracks.items():
+        floor_excluded_result = _replay_row_ablated(peak_row, group_keys=None, zero_floors=True)
+        with_floors_result, _, _ = replay_row(peak_row)
+        results["weighted_sum_excluding_floors"][label] = {
+            "final_score_with_floors": with_floors_result.score,
+            "final_confidence_with_floors": with_floors_result.confidence,
+            "weighted_sum_excluding_floors": floor_excluded_result.score,
+            "floor_determines_outcome": with_floors_result.score > floor_excluded_result.score,
+        }
+        print(f"[ablation] {label}: with_floors={with_floors_result.score} "
+              f"weighted_sum_only={floor_excluded_result.score} "
+              f"floor_determines_outcome={results['weighted_sum_excluding_floors'][label]['floor_determines_outcome']}")
+
+    # ── Per-feature contribution breakdown at peak (which weights actually fired) ──
+    for label, peak_row in verified_tracks.items():
+        contributions = {}
+        for group_name, group_keys in ABLATION_GROUPS.items():
+            weight_overrides = {k: 0 for k in group_keys}
+            ablated_result, _, _ = replay_row(peak_row, weight_overrides=weight_overrides)
+            baseline_score = float(peak_row["score"])
+            # Positive contribution only visible when the ablated score actually
+            # drops (a floor can mask a weight's true contribution -- reported
+            # against the floor-excluded baseline for that reason).
+            floor_excluded_baseline = results["weighted_sum_excluding_floors"][label]["weighted_sum_excluding_floors"]
+            floor_excluded_ablated = _replay_row_ablated(peak_row, group_keys=group_keys, zero_floors=True)
+            contributions[group_name] = round(floor_excluded_baseline - floor_excluded_ablated.score, 2)
+        results["per_feature_contribution_at_peak"][label] = contributions
+        nonzero = {k: v for k, v in contributions.items() if v > 0}
+        print(f"[ablation] {label} per-feature contributions (weighted-sum basis): {nonzero}")
+
+    out_path = final_path("ablation", "v2", ext="json")
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"[ablation] wrote {out_path}")
+
+
 def cmd_registry(args):
     print(f"[registry] mode={args.mode}")
     if args.mode == "gate-replay":
@@ -2435,6 +2606,9 @@ def main():
 
     p = sub.add_parser("confusion-matrix")
     p.set_defaults(func=cmd_confusion_matrix)
+
+    p = sub.add_parser("ablation")
+    p.set_defaults(func=cmd_ablation)
 
     p = sub.add_parser("registry")
     p.add_argument("--mode", default="gate-replay",
