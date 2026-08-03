@@ -1,0 +1,375 @@
+{
+  "reading1_all_tracks_medium_plus": {
+    "reading": "Reading 1: all positive tracks, MEDIUM+",
+    "n": 1179328,
+    "TP": 2359,
+    "FN": 589,
+    "TN": 1176380,
+    "FP": 0,
+    "precision": 1.0,
+    "recall": 0.8002,
+    "f1": 0.889,
+    "specificity": 1.0,
+    "false_positive_rate": 0.0,
+    "fpr_95_upper_confidence_bound": 3e-06,
+    "negative_class_composition_pct": {
+      "v2_benign_openssl_t1": 0.02,
+      "v2_benign_openssl_t2": 0.02,
+      "v2_benign_openssl_t3": 0.02,
+      "v2_benign_gcc_t1": 30.04,
+      "v2_benign_gcc_t2": 33.41,
+      "v2_benign_gcc_t3": 36.48
+    },
+    "per_track": {
+      "v2_xmrig_fullspeed": {
+        "n": 300,
+        "positive": 273,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_renamed": {
+        "n": 298,
+        "positive": 279,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "n": 299,
+        "positive": 272,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_upx_packed": {
+        "n": 298,
+        "positive": 276,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_4proc_split": {
+        "n": 1188,
+        "positive": 1076,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t1": {
+        "n": 89,
+        "positive": 45,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t2": {
+        "n": 89,
+        "positive": 58,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t3": {
+        "n": 89,
+        "positive": 65,
+        "excluded_pre_detection": 0
+      },
+      "browser_wasm_miner": {
+        "n": 298,
+        "positive": 15,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t1": {
+        "n": 293,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t2": {
+        "n": 289,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t3": {
+        "n": 285,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t1": {
+        "n": 353362,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t2": {
+        "n": 393020,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t3": {
+        "n": 429131,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      }
+    }
+  },
+  "reading2_mining_only_medium_plus": {
+    "reading": "Reading 2: mining tracks only (excl. stratum/WASM), MEDIUM+",
+    "n": 1178763,
+    "TP": 2176,
+    "FN": 207,
+    "TN": 1176380,
+    "FP": 0,
+    "precision": 1.0,
+    "recall": 0.9131,
+    "f1": 0.9546,
+    "specificity": 1.0,
+    "false_positive_rate": 0.0,
+    "fpr_95_upper_confidence_bound": 3e-06,
+    "negative_class_composition_pct": {
+      "v2_benign_openssl_t1": 0.02,
+      "v2_benign_openssl_t2": 0.02,
+      "v2_benign_openssl_t3": 0.02,
+      "v2_benign_gcc_t1": 30.04,
+      "v2_benign_gcc_t2": 33.41,
+      "v2_benign_gcc_t3": 36.48
+    },
+    "per_track": {
+      "v2_xmrig_fullspeed": {
+        "n": 300,
+        "positive": 273,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_renamed": {
+        "n": 298,
+        "positive": 279,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "n": 299,
+        "positive": 272,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_upx_packed": {
+        "n": 298,
+        "positive": 276,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_4proc_split": {
+        "n": 1188,
+        "positive": 1076,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t1": {
+        "n": 293,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t2": {
+        "n": 289,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t3": {
+        "n": 285,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t1": {
+        "n": 353362,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t2": {
+        "n": 393020,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t3": {
+        "n": 429131,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      }
+    }
+  },
+  "reading3_steady_state_medium_plus": {
+    "reading": "Reading 3: steady state, MEDIUM+",
+    "n": 3419,
+    "TP": 2359,
+    "FN": 274,
+    "TN": 786,
+    "FP": 0,
+    "precision": 1.0,
+    "recall": 0.8959,
+    "f1": 0.9451,
+    "specificity": 1.0,
+    "false_positive_rate": 0.0,
+    "fpr_95_upper_confidence_bound": 0.003817,
+    "negative_class_composition_pct": {
+      "v2_benign_openssl_t1": 35.24,
+      "v2_benign_openssl_t2": 33.33,
+      "v2_benign_openssl_t3": 31.42
+    },
+    "per_track": {
+      "v2_xmrig_fullspeed": {
+        "n": 273,
+        "positive": 273,
+        "excluded_pre_detection": 27
+      },
+      "v2_xmrig_renamed": {
+        "n": 279,
+        "positive": 279,
+        "excluded_pre_detection": 19
+      },
+      "v2_xmrig_evasion_1thread": {
+        "n": 287,
+        "positive": 272,
+        "excluded_pre_detection": 12
+      },
+      "v2_xmrig_upx_packed": {
+        "n": 276,
+        "positive": 276,
+        "excluded_pre_detection": 22
+      },
+      "v2_xmrig_4proc_split": {
+        "n": 1076,
+        "positive": 1076,
+        "excluded_pre_detection": 112
+      },
+      "v2_stratum_client_t1": {
+        "n": 45,
+        "positive": 45,
+        "excluded_pre_detection": 44
+      },
+      "v2_stratum_client_t2": {
+        "n": 58,
+        "positive": 58,
+        "excluded_pre_detection": 31
+      },
+      "v2_stratum_client_t3": {
+        "n": 65,
+        "positive": 65,
+        "excluded_pre_detection": 24
+      },
+      "browser_wasm_miner": {
+        "n": 274,
+        "positive": 15,
+        "excluded_pre_detection": 24
+      },
+      "v2_benign_openssl_t1": {
+        "n": 277,
+        "positive": 0,
+        "excluded_pre_detection": 16
+      },
+      "v2_benign_openssl_t2": {
+        "n": 262,
+        "positive": 0,
+        "excluded_pre_detection": 27
+      },
+      "v2_benign_openssl_t3": {
+        "n": 247,
+        "positive": 0,
+        "excluded_pre_detection": 38
+      },
+      "v2_benign_gcc_t1": {
+        "n": 0,
+        "positive": 0,
+        "excluded_pre_detection": 353362
+      },
+      "v2_benign_gcc_t2": {
+        "n": 0,
+        "positive": 0,
+        "excluded_pre_detection": 393020
+      },
+      "v2_benign_gcc_t3": {
+        "n": 0,
+        "positive": 0,
+        "excluded_pre_detection": 429131
+      }
+    }
+  },
+  "reading4_any_alert_low_plus": {
+    "reading": "Reading 4: any alert tier, LOW+",
+    "n": 1179328,
+    "TP": 2633,
+    "FN": 315,
+    "TN": 1175594,
+    "FP": 786,
+    "precision": 0.7701,
+    "recall": 0.8931,
+    "f1": 0.8271,
+    "specificity": 0.9993,
+    "false_positive_rate": 0.0007,
+    "fpr_95_upper_confidence_bound": 0.000717,
+    "negative_class_composition_pct": {
+      "v2_benign_openssl_t1": 0.02,
+      "v2_benign_openssl_t2": 0.02,
+      "v2_benign_openssl_t3": 0.02,
+      "v2_benign_gcc_t1": 30.04,
+      "v2_benign_gcc_t2": 33.41,
+      "v2_benign_gcc_t3": 36.48
+    },
+    "per_track": {
+      "v2_xmrig_fullspeed": {
+        "n": 300,
+        "positive": 273,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_renamed": {
+        "n": 298,
+        "positive": 279,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "n": 299,
+        "positive": 287,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_upx_packed": {
+        "n": 298,
+        "positive": 276,
+        "excluded_pre_detection": 0
+      },
+      "v2_xmrig_4proc_split": {
+        "n": 1188,
+        "positive": 1076,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t1": {
+        "n": 89,
+        "positive": 45,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t2": {
+        "n": 89,
+        "positive": 58,
+        "excluded_pre_detection": 0
+      },
+      "v2_stratum_client_t3": {
+        "n": 89,
+        "positive": 65,
+        "excluded_pre_detection": 0
+      },
+      "browser_wasm_miner": {
+        "n": 298,
+        "positive": 274,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t1": {
+        "n": 293,
+        "positive": 277,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t2": {
+        "n": 289,
+        "positive": 262,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_openssl_t3": {
+        "n": 285,
+        "positive": 247,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t1": {
+        "n": 353362,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t2": {
+        "n": 393020,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      },
+      "v2_benign_gcc_t3": {
+        "n": 429131,
+        "positive": 0,
+        "excluded_pre_detection": 0
+      }
+    }
+  }
+}
