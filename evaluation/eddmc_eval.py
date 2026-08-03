@@ -48,7 +48,11 @@ from daemon.fingerprint.packager import feature_vector as fp_feature_vector  # n
 from daemon.fingerprint.matcher import _cosine as fp_cosine  # noqa: E402
 
 RESULTS_DIR = os.path.join(REPO_ROOT, "evaluation", "results")
-FINAL_DIR = os.path.join(RESULTS_DIR, "final")
+# Re-evaluation round (2026-08-03): write-once, never-overwrite the existing
+# evaluation/results/final/ data. EDDMC_EVAL_OUT=final_v2 redirects every
+# subcommand's output (capture/cascade/overhead/baseline/registry/report) to
+# evaluation/results/final_v2/ instead, with zero risk of touching the old set.
+FINAL_DIR = os.path.join(RESULTS_DIR, os.environ.get("EDDMC_EVAL_OUT", "final"))
 FIGURES_DIR = os.path.join(REPO_ROOT, "evaluation", "figures")
 REPORTS_DIR = os.path.join(REPO_ROOT, "reports")
 SOCK = "/tmp/eddmc.sock"
