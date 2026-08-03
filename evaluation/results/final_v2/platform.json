@@ -1,5 +1,5 @@
 {
-  "captured_at_unix": 1785783727.4937189,
+  "captured_at_unix": 1785788980.1306815,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
@@ -7,10 +7,24 @@
   "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "16ab31684f86854d687647d94d8d2060485808e9",
+    "sha": "f80c57ea7f03fc2e5566029f432bbc1b92f2e803",
     "dirty": true,
     "dirty_files": [
-      "?? evaluation/results/final_v2/registry_gate_replay_20260804T002201.json"
+      "M evaluation/results/final_v2/platform.json",
+      "?? evaluation/results/final_v2/capture_browser_wasm_miner_postfix_20260804T013224.csv",
+      "?? evaluation/results/final_v2/capture_v2_benign_gcc_t1_20260804T015359.csv",
+      "?? evaluation/results/final_v2/capture_v2_benign_gcc_t2_20260804T015919.csv",
+      "?? evaluation/results/final_v2/capture_v2_benign_openssl_t1_20260804T013747.csv",
+      "?? evaluation/results/final_v2/capture_v2_benign_openssl_t2_20260804T014312.csv",
+      "?? evaluation/results/final_v2/capture_v2_benign_openssl_t3_20260804T014823.csv",
+      "?? evaluation/results/final_v2/capture_v2_stratum_client_t1_20260804T012135.csv",
+      "?? evaluation/results/final_v2/capture_v2_stratum_client_t2_20260804T012441.csv",
+      "?? evaluation/results/final_v2/capture_v2_stratum_client_t3_20260804T012656.csv",
+      "?? evaluation/results/final_v2/capture_v2_xmrig_4proc_split_20260804T011955.csv",
+      "?? evaluation/results/final_v2/capture_v2_xmrig_evasion_1thread_20260804T010835.csv",
+      "?? evaluation/results/final_v2/capture_v2_xmrig_fullspeed_20260804T005736.csv",
+      "?? evaluation/results/final_v2/capture_v2_xmrig_renamed_20260804T010316.csv",
+      "?? evaluation/results/final_v2/capture_v2_xmrig_upx_packed_20260804T011405.csv"
     ]
   }
 }
