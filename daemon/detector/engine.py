@@ -377,3 +377,8 @@ class DetectionEngine:
 
         self.last_tracked_count = tracked_count
         self.last_scored_count  = scored_count
+        # Re-evaluation round, Task 5 (detection latency): a permanent,
+        # pure-observability DEBUG line (no behavioural effect) so real
+        # scan-cycle cadence and the tracked/scored population size can be
+        # measured directly from the log, rather than inferred indirectly.
+        logger.debug("scan tick at %.3f, tracked=%d scored=%d", now, tracked_count, scored_count)
