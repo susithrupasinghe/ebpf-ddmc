@@ -1250,7 +1250,16 @@ def cmd_baseline(args):
     # evaluation/results/, in which case the caller has explicitly asked for
     # the legacy pre-fix-track behaviour and gets it, degenerate result and all.
     using_default_dir = os.path.normpath(replay_dir) == os.path.normpath(RESULTS_DIR)
-    track_specs = (POSTFIX_MINING_TRACKS + POSTFIX_BENIGN_TRACKS) if using_default_dir else None
+    if os.environ.get("EDDMC_EVAL_OUT") == "final_v2":
+        # Re-evaluation round (Task 8): reuse the exact same 9-track spec as
+        # Tasks 2/3's confusion-matrix/ablation subcommands (V2_CONFUSION_TRACKS,
+        # defined further down in this file -- Python resolves this name at call
+        # time, not at this function's definition time, so the later definition
+        # is visible here), so all three tasks evaluate the identical
+        # observation set as required.
+        track_specs = [(label, _glob_latest(pattern), gt) for label, pattern, gt, _cat in V2_CONFUSION_TRACKS]
+    else:
+        track_specs = (POSTFIX_MINING_TRACKS + POSTFIX_BENIGN_TRACKS) if using_default_dir else None
 
     def grouped_from_specs(specs):
         g = {}
