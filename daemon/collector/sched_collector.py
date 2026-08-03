@@ -5,12 +5,19 @@ Loads sched_monitor.c and syncs scheduler statistics (CPU time,
 context switches, thread count) into the shared process state store.
 """
 
+import logging
 import os
 import threading
 import ctypes
 from bcc import BPF
 
 EBPF_SRC = os.path.join(os.path.dirname(__file__), "../ebpf/sched_monitor.c")
+logger = logging.getLogger("eddmc.collector")
+
+# Must match MAX_PIDS in sched_monitor.c. Used only to compute a utilisation
+# warning here -- the real capacity is enforced in the .c source.
+_SCHED_STATS_MAX_ENTRIES = 65536
+_SCHED_STATS_WARN_THRESHOLD = 0.8  # log once utilisation crosses this fraction
 
 
 class ThreadEvent(ctypes.Structure):
@@ -34,6 +41,7 @@ class SchedCollector:
         self._lock    = lock
         self._bpf     = None
         self._running = False
+        self._high_utilisation_warned = False
 
     def load(self):
         with open(EBPF_SRC, "r") as f:
@@ -77,7 +85,9 @@ class SchedCollector:
         """
         sched_stats = self._bpf["sched_stats"]
         groups = {}  # effective_tgid -> {"on_cpu_ns":..,"voluntary":..,"involuntary":..,"thread_count":..}
+        raw_entries = 0
         for k, v in sched_stats.items():
+            raw_entries += 1
             tid = k.value
             effective_tgid = v.tgid if v.tgid else tid
             g = groups.setdefault(effective_tgid, {"on_cpu_ns": 0, "voluntary": 0, "involuntary": 0, "thread_count": 0})
@@ -86,6 +96,23 @@ class SchedCollector:
             g["involuntary"]  += v.involuntary_switches
             if v.thread_count > g["thread_count"]:
                 g["thread_count"] = v.thread_count  # only the leader's own entry carries a real count
+
+        # A full map makes every subsequent map.update() fail silently (BCC
+        # surfaces no error), after which every process gets zero scheduler
+        # data for the rest of its life -- exactly the defect found during
+        # the 2026-08 re-evaluation round. Log once (not every poll) when
+        # utilisation crosses the warning threshold, so this fails loudly
+        # instead of silently next time, however large MAX_PIDS ends up
+        # needing to be on a given host.
+        if not self._high_utilisation_warned and raw_entries >= _SCHED_STATS_MAX_ENTRIES * _SCHED_STATS_WARN_THRESHOLD:
+            self._high_utilisation_warned = True
+            logger.warning(
+                "sched_stats BPF map at %d/%d entries (%.0f%%) -- approaching capacity. "
+                "Once full, scheduler data silently stops updating for new processes. "
+                "Consider raising MAX_PIDS in sched_monitor.c or restarting the daemon.",
+                raw_entries, _SCHED_STATS_MAX_ENTRIES,
+                100.0 * raw_entries / _SCHED_STATS_MAX_ENTRIES,
+            )
 
         for tgid, g in groups.items():
             with self._lock:

@@ -13,7 +13,17 @@
 #include <uapi/linux/ptrace.h>
 #include <linux/sched.h>
 
-#define MAX_PIDS 4096
+/* 2026-08-04: raised from 4096 -- found this filling permanently on a
+ * busy multi-hour-uptime desktop host (VSCode/Chromium/gnome-shell thread
+ * churn), since sched_switch's tracepoint creates an entry for every
+ * thread scheduled anywhere on the system, and BCC's BPF_HASH has no
+ * dynamic resize. Once full, map.update() fails silently (no error
+ * surfaced), so every process from that point on gets zero scheduler
+ * data for its entire life -- this is what caused the total on_cpu_ns/
+ * switch-count failure found and worked around during Task 7 of the
+ * 2026-08 re-evaluation round. 65536 entries costs a few MB of kernel
+ * memory (struct sched_stats is small) in exchange for real headroom. */
+#define MAX_PIDS 65536
 
 struct sched_stats {
     u64 on_cpu_ns;
