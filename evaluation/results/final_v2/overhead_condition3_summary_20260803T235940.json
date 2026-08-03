@@ -1,0 +1,34 @@
+{
+  "condition": "3",
+  "workload": "openssl speed (benign CPU load), duration=300.0s",
+  "trials": [
+    {
+      "system_cpu_pct_one_core_mean": 184.72133333333335,
+      "daemon_cpu_pct_mean": 65.137,
+      "daemon_rss_mb_mean": 223.90380208333335,
+      "trial": 1,
+      "workload": "openssl speed (benign CPU load), duration=300.0s"
+    },
+    {
+      "system_cpu_pct_one_core_mean": 184.4573333333333,
+      "daemon_cpu_pct_mean": 64.42466666666667,
+      "daemon_rss_mb_mean": 224.23877604166665,
+      "trial": 2,
+      "workload": "openssl speed (benign CPU load), duration=300.0s"
+    },
+    {
+      "system_cpu_pct_one_core_mean": 185.07066666666665,
+      "daemon_cpu_pct_mean": 65.622,
+      "daemon_rss_mb_mean": 212.08651041666667,
+      "trial": 3,
+      "workload": "openssl speed (benign CPU load), duration=300.0s"
+    }
+  ],
+  "duration_s_per_trial": 300.0,
+  "n_trials": 3,
+  "daemon_cpu_mean_of_means_pct": 65.06122222222223,
+  "daemon_cpu_sd_pct": 0.49173738348938606,
+  "daemon_rss_mb_mean": 220.0763628472222,
+  "daemon_rss_mb_sd": 5.651333664704361,
+  "system_cpu_mean_of_means_pct_one_core": 184.74977777777778
+}

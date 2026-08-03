@@ -1,0 +1,129 @@
+{
+  "note": "RE-EVALUATION round Task 6: full spec (4 conditions x 3 trials x 300s each). Host quietness check FAILED its own stated threshold (36.05% mean vs the ~20% bar) -- proceeding anyway per explicit instruction, caveat disclosed prominently rather than silently omitted. Same daemon code as the RO2 closure round (unchanged since).",
+  "host_quietness_check": {
+    "measured_pct_one_core": 36.05,
+    "threshold_pct_one_core": 20.0,
+    "passed": false
+  },
+  "conditions": {
+    "1_daemon_stopped": {
+      "n_trials": 4,
+      "note": "includes 1 pre-check (60s) + 3 spec trials (300s)",
+      "system_cpu_pct_one_core_mean": 36.49766666666667
+    },
+    "2_daemon_idle": {
+      "condition": "2",
+      "workload": "none (idle)",
+      "trials": [
+        {
+          "system_cpu_pct_one_core_mean": 82.86800000000001,
+          "daemon_cpu_pct_mean": 54.68466666666667,
+          "daemon_rss_mb_mean": 223.50204427083332,
+          "trial": 1,
+          "workload": "none (idle)"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 88.18933333333334,
+          "daemon_cpu_pct_mean": 60.57966666666667,
+          "daemon_rss_mb_mean": 223.51,
+          "trial": 2,
+          "workload": "none (idle)"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 89.37466666666667,
+          "daemon_cpu_pct_mean": 62.543000000000006,
+          "daemon_rss_mb_mean": 223.64430989583335,
+          "trial": 3,
+          "workload": "none (idle)"
+        }
+      ],
+      "duration_s_per_trial": 300.0,
+      "n_trials": 3,
+      "daemon_cpu_mean_of_means_pct": 59.26911111111112,
+      "daemon_cpu_sd_pct": 3.3393130623520553,
+      "daemon_rss_mb_mean": 223.55211805555555,
+      "daemon_rss_mb_sd": 0.06527033510458773,
+      "system_cpu_mean_of_means_pct_one_core": 86.81066666666668
+    },
+    "3_daemon_benign_workload": {
+      "condition": "3",
+      "workload": "openssl speed (benign CPU load), duration=300.0s",
+      "trials": [
+        {
+          "system_cpu_pct_one_core_mean": 184.72133333333335,
+          "daemon_cpu_pct_mean": 65.137,
+          "daemon_rss_mb_mean": 223.90380208333335,
+          "trial": 1,
+          "workload": "openssl speed (benign CPU load), duration=300.0s"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 184.4573333333333,
+          "daemon_cpu_pct_mean": 64.42466666666667,
+          "daemon_rss_mb_mean": 224.23877604166665,
+          "trial": 2,
+          "workload": "openssl speed (benign CPU load), duration=300.0s"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 185.07066666666665,
+          "daemon_cpu_pct_mean": 65.622,
+          "daemon_rss_mb_mean": 212.08651041666667,
+          "trial": 3,
+          "workload": "openssl speed (benign CPU load), duration=300.0s"
+        }
+      ],
+      "duration_s_per_trial": 300.0,
+      "n_trials": 3,
+      "daemon_cpu_mean_of_means_pct": 65.06122222222223,
+      "daemon_cpu_sd_pct": 0.49173738348938606,
+      "daemon_rss_mb_mean": 220.0763628472222,
+      "daemon_rss_mb_sd": 5.651333664704361,
+      "system_cpu_mean_of_means_pct_one_core": 184.74977777777778
+    },
+    "4_daemon_xmrig_active": {
+      "condition": "4",
+      "workload": "xmrig via mock stratum: /usr/bin/xmrig --randomx-mode=light --no-color -o 127.0.0.1:3333 -u mockwallet -p x",
+      "trials": [
+        {
+          "system_cpu_pct_one_core_mean": 114.74266666666668,
+          "daemon_cpu_pct_mean": 63.401666666666664,
+          "daemon_rss_mb_mean": 143.00561197916667,
+          "trial": 1,
+          "workload": "xmrig via mock stratum: /usr/bin/xmrig --randomx-mode=light --no-color -o 127.0.0.1:3333 -u mockwallet -p x"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 128.80133333333333,
+          "daemon_cpu_pct_mean": 62.07266666666666,
+          "daemon_rss_mb_mean": 136.88518229166667,
+          "trial": 2,
+          "workload": "xmrig via mock stratum: /usr/bin/xmrig --randomx-mode=light --no-color -o 127.0.0.1:3333 -u mockwallet -p x"
+        },
+        {
+          "system_cpu_pct_one_core_mean": 129.20666666666668,
+          "daemon_cpu_pct_mean": 63.202,
+          "daemon_rss_mb_mean": 135.93514322916667,
+          "trial": 3,
+          "workload": "xmrig via mock stratum: /usr/bin/xmrig --randomx-mode=light --no-color -o 127.0.0.1:3333 -u mockwallet -p x"
+        }
+      ],
+      "duration_s_per_trial": 300.0,
+      "n_trials": 3,
+      "daemon_cpu_mean_of_means_pct": 62.89211111111111,
+      "daemon_cpu_sd_pct": 0.5851402068977961,
+      "daemon_rss_mb_mean": 138.60864583333333,
+      "daemon_rss_mb_sd": 3.1332227307542118,
+      "system_cpu_mean_of_means_pct_one_core": 124.25022222222223
+    }
+  },
+  "marginal_overhead_condition2_minus_condition1_daemon_measurement_pct_one_core": 59.27,
+  "marginal_overhead_condition2_minus_condition1_system_wide_pct_one_core": 50.31,
+  "comparison_to_ro2_closure_round": {
+    "original_pre_optimisation_idle_cpu_pct": 163.6,
+    "original_pre_optimisation_idle_rss_mb": 232.8,
+    "ro2_closure_round_idle_cpu_pct": 66.2,
+    "ro2_closure_round_idle_rss_mb": 219.1,
+    "this_round_idle_cpu_pct": 59.26911111111112,
+    "this_round_idle_rss_mb": 223.55211805555555,
+    "note": "same optimised code as the closure round (no changes since); this round's fresh measurement (59.3%) is consistent with the closure round's 66.2%, both well below the original 163.6% and both still above the RO2 <25% target."
+  },
+  "condition4_finding": "System-wide CPU under \"xmrig active\" (114.7-129.2% across trials) is LOWER than condition 3's benign workload (184.5-185.1%) -- confirmed not an error: the daemon log shows xmrig reaching CRITICAL/TERMINATE within ~26s each trial, after which the 5%-of-one-core CRITICAL cgroup quota suppresses it for the remaining ~274s of every 300s trial. This condition's figure reflects a miner under REAL, WORKING enforcement for most of its duration, not unmitigated full-speed mining -- a direct, reproducible consequence of RO4 holding, not a measurement artefact."
+}

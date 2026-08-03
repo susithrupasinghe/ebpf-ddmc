@@ -1,0 +1,7 @@
+{
+  "system_cpu_pct_one_core_mean": 184.4573333333333,
+  "daemon_cpu_pct_mean": 64.42466666666667,
+  "daemon_rss_mb_mean": 224.23877604166665,
+  "trial": 2,
+  "workload": "openssl speed (benign CPU load), duration=300.0s"
+}

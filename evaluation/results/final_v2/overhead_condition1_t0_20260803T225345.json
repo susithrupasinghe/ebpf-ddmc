@@ -1,0 +1,7 @@
+{
+  "system_cpu_pct_one_core_mean": 36.05333333333333,
+  "daemon_cpu_pct_mean": 0.0,
+  "daemon_rss_mb_mean": 0.0,
+  "trial": 0,
+  "workload": "none (daemon stopped)"
+}

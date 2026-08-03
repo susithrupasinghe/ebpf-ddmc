@@ -1,0 +1,34 @@
+{
+  "condition": "2",
+  "workload": "none (idle)",
+  "trials": [
+    {
+      "system_cpu_pct_one_core_mean": 82.86800000000001,
+      "daemon_cpu_pct_mean": 54.68466666666667,
+      "daemon_rss_mb_mean": 223.50204427083332,
+      "trial": 1,
+      "workload": "none (idle)"
+    },
+    {
+      "system_cpu_pct_one_core_mean": 88.18933333333334,
+      "daemon_cpu_pct_mean": 60.57966666666667,
+      "daemon_rss_mb_mean": 223.51,
+      "trial": 2,
+      "workload": "none (idle)"
+    },
+    {
+      "system_cpu_pct_one_core_mean": 89.37466666666667,
+      "daemon_cpu_pct_mean": 62.543000000000006,
+      "daemon_rss_mb_mean": 223.64430989583335,
+      "trial": 3,
+      "workload": "none (idle)"
+    }
+  ],
+  "duration_s_per_trial": 300.0,
+  "n_trials": 3,
+  "daemon_cpu_mean_of_means_pct": 59.26911111111112,
+  "daemon_cpu_sd_pct": 3.3393130623520553,
+  "daemon_rss_mb_mean": 223.55211805555555,
+  "daemon_rss_mb_sd": 0.06527033510458773,
+  "system_cpu_mean_of_means_pct_one_core": 86.81066666666668
+}
