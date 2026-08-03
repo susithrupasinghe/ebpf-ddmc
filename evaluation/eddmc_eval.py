@@ -934,19 +934,51 @@ def cmd_cascade(args):
     print(f"[cascade] launching: {' '.join(xmrig_argv)}")
     proc = subprocess.Popen(xmrig_argv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
+    # Independent CPU sampling (Task 4, re-evaluation round): psutil sampling
+    # of the xmrig pid itself, entirely outside the daemon's own measurement
+    # path, using the daemon's own mitigation tier only as a before/after
+    # boundary marker -- the same approach used for the earlier mitigation-
+    # effect measurement (avoids the daemon's scan-cadence gaps entirely
+    # since this polls the OS directly, once per second).
+    import psutil
+    try:
+        xmrig_psutil_proc = psutil.Process(proc.pid)
+        xmrig_psutil_proc.cpu_percent(interval=None)  # prime, first call always 0.0
+    except Exception:
+        xmrig_psutil_proc = None
+    cpu_samples = {"none": [], "throttled_or_above": []}
+
     events = []  # (elapsed, event_description)
     state = {"seen_high": False, "seen_critical": False, "revoke_attempted": False,
-             "revoke_result": None}
+             "revoke_result": None, "high_tier_entered_at": None, "high_enforcement_confirmed_at": None,
+             "critical_tier_entered_at": None, "critical_sustained_ticks": 0}
 
     def on_tick(elapsed, tick_rows):
+        if xmrig_psutil_proc is not None:
+            try:
+                cpu_pct = xmrig_psutil_proc.cpu_percent(interval=None)
+                mitigation_now = tick_rows[0]["mitigation"] if tick_rows else "NONE"
+                bucket = "none" if mitigation_now == "NONE" else "throttled_or_above"
+                cpu_samples[bucket].append(cpu_pct)
+            except Exception:
+                pass
         for r in tick_rows:
             conf = r["confidence"]
             if conf == "HIGH" and not state["seen_high"]:
                 state["seen_high"] = True
-                events.append((elapsed, f"first HIGH, score={r['score']}"))
+                state["high_tier_entered_at"] = elapsed
+                fw = iptables_block_exists(proc.pid)
+                fw_now = "eddmc-block" in fw.get("iptables_output", "")
+                if fw_now:
+                    state["high_enforcement_confirmed_at"] = elapsed
+                events.append((elapsed, f"first HIGH, score={r['score']}, firewall_block_in_kernel_state={fw_now}"))
             if conf == "CRITICAL" and not state["seen_critical"]:
                 state["seen_critical"] = True
-                events.append((elapsed, f"first CRITICAL, score={r['score']}"))
+                state["critical_tier_entered_at"] = elapsed
+                events.append((elapsed, f"first CRITICAL, score={r['score']}, "
+                                        f"proc_suspended={process_state(proc.pid) == 'T'}"))
+            if conf == "CRITICAL":
+                state["critical_sustained_ticks"] += 1
             # Reversibility (RO4, required): once CRITICAL/SUSPEND is confirmed
             # in real kernel state (not just the daemon's own label), call the
             # daemon's own revoke path -- exactly once per trial -- and verify
@@ -997,6 +1029,8 @@ def cmd_cascade(args):
     out_path = final_path("cascade", f"trial{args.trial_index}")
     write_csv(rows, out_path)
 
+    none_samples = cpu_samples["none"][1:]  # drop the first primer-call 0.0
+    thr_samples = cpu_samples["throttled_or_above"]
     summary = {
         "trial_index": args.trial_index,
         "stratum_connections_seen": listener.connections_seen,
@@ -1009,6 +1043,27 @@ def cmd_cascade(args):
         "firewall_state_at_end": fw_state,
         "peak_score": max((r["score"] for r in rows), default=0.0),
         "peak_confidence": max((r["confidence"] for r in rows), key=lambda c: CONFIDENCE_RANK.get(c, 0), default="NONE"),
+        "high_tier_entered_at_s": state["high_tier_entered_at"],
+        "high_enforcement_confirmed_in_kernel_state_at_s": state["high_enforcement_confirmed_at"],
+        "time_from_high_tier_to_firewall_enforcement_s": (
+            (state["high_enforcement_confirmed_at"] - state["high_tier_entered_at"])
+            if (state["high_tier_entered_at"] is not None and state["high_enforcement_confirmed_at"] is not None)
+            else None),
+        "critical_tier_entered_at_s": state["critical_tier_entered_at"],
+        "critical_sustained_ticks": state["critical_sustained_ticks"],
+        "critical_sustained_seconds_approx": state["critical_sustained_ticks"] * 1.0,
+        "independent_cpu_sampling": {
+            "note": "psutil.Process(xmrig_pid).cpu_percent() sampled once per second, "
+                    "entirely independent of the daemon's own measurement path; bucketed "
+                    "by the daemon's own mitigation tier at each sample as a before/after "
+                    "boundary marker only.",
+            "mean_cpu_pct_before_enforcement_mitigation_none": (
+                sum(none_samples) / len(none_samples) if none_samples else None),
+            "n_samples_before": len(none_samples),
+            "mean_cpu_pct_after_enforcement_throttle_or_above": (
+                sum(thr_samples) / len(thr_samples) if thr_samples else None),
+            "n_samples_after": len(thr_samples),
+        },
     }
     summary_path = final_path("cascade", f"trial{args.trial_index}_summary", ext="json")
     with open(summary_path, "w") as f:

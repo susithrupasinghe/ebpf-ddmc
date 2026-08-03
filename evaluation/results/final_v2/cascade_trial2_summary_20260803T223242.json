@@ -1,0 +1,54 @@
+{
+  "trial_index": 2,
+  "stratum_connections_seen": 1,
+  "stratum_jobs_sent": 1,
+  "stratum_submits_seen": 0,
+  "events": [
+    [
+      46.71746373176575,
+      "first HIGH, score=72.0, firewall_block_in_kernel_state=True"
+    ],
+    [
+      127.55426359176636,
+      "first CRITICAL, score=86.0, proc_suspended=True"
+    ],
+    [
+      127.55426359176636,
+      "revoke called, cgroup_removed=True, proc_resumed=True"
+    ]
+  ],
+  "reversibility_test": {
+    "revoke_api_response": {
+      "ok": true,
+      "pid": 158986
+    },
+    "elapsed_s": 127.55426359176636,
+    "cgroup_quota_existed_before": true,
+    "cgroup_quota_exists_after": false,
+    "proc_state_after_revoke": "S",
+    "iptables_had_block_before": true,
+    "iptables_has_block_after": true
+  },
+  "cgroup_quota_exists_at_end": false,
+  "cgroup_quota_value_at_end": null,
+  "proc_state_at_end": "S",
+  "firewall_state_at_end": {
+    "iptables_output": "Chain INPUT (policy ACCEPT 0 packets, 0 bytes)\n pkts bytes target     prot opt in     out     source               destination         \n\nChain FORWARD (policy ACCEPT 0 packets, 0 bytes)\n pkts bytes target     prot opt in     out     source               destination         \n\nChain OUTPUT (policy ACCEPT 235K packets, 521M bytes)\n pkts bytes target     prot opt in     out     source               destination         \n    0     0 DROP       all  --  *      *       0.0.0.0/0            0.0.0.0/0            cgroup eddmc/3779 /* eddmc-block-3779 */",
+    "nftables_output": "table ip filter {\n\tchain OUTPUT {\n\t\ttype filter hook output priority filter; policy accept;\n\t\txt match \"cgroup\"  counter packets 0 bytes 0 drop\n\t}\n}"
+  },
+  "peak_score": 100.0,
+  "peak_confidence": "CRITICAL",
+  "high_tier_entered_at_s": 46.71746373176575,
+  "high_enforcement_confirmed_in_kernel_state_at_s": 46.71746373176575,
+  "time_from_high_tier_to_firewall_enforcement_s": 0.0,
+  "critical_tier_entered_at_s": 127.55426359176636,
+  "critical_sustained_ticks": 165,
+  "critical_sustained_seconds_approx": 165.0,
+  "independent_cpu_sampling": {
+    "note": "psutil.Process(xmrig_pid).cpu_percent() sampled once per second, entirely independent of the daemon's own measurement path; bucketed by the daemon's own mitigation tier at each sample as a before/after boundary marker only.",
+    "mean_cpu_pct_before_enforcement_mitigation_none": 328.3607142857143,
+    "n_samples_before": 28,
+    "mean_cpu_pct_after_enforcement_throttle_or_above": 215.06269230769232,
+    "n_samples_after": 260
+  }
+}

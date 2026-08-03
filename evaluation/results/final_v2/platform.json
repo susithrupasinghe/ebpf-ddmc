@@ -1,5 +1,5 @@
 {
-  "captured_at_unix": 1785774776.0639768,
+  "captured_at_unix": 1785776572.0835836,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
@@ -7,10 +7,15 @@
   "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "4da4c64e2f9e31a06ed39d8749f79397cb5954d9",
+    "sha": "4d6fd25c9b379a0f7b87bb4ba2bc02cc8aaa37fc",
     "dirty": true,
     "dirty_files": [
-      "?? evaluation/results/final_v2/"
+      "M evaluation/eddmc_eval.py",
+      " M evaluation/results/final_v2/platform.json",
+      "?? evaluation/results/final_v2/cascade_trial1_20260803T222719.csv",
+      "?? evaluation/results/final_v2/cascade_trial1_summary_20260803T222719.json",
+      "?? evaluation/results/final_v2/cascade_trial2_20260803T223242.csv",
+      "?? evaluation/results/final_v2/cascade_trial2_summary_20260803T223242.json"
     ]
   }
 }
