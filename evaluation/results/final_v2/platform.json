@@ -1,0 +1,16 @@
+{
+  "captured_at_unix": 1785774776.0639768,
+  "kernel_release": "7.0.0-28-generic",
+  "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
+  "machine_arch": "aarch64",
+  "cpu_count_logical": 4,
+  "mem_total_kb": 3462108,
+  "mem_total_gb": 3.3,
+  "git": {
+    "sha": "4da4c64e2f9e31a06ed39d8749f79397cb5954d9",
+    "dirty": true,
+    "dirty_files": [
+      "?? evaluation/results/final_v2/"
+    ]
+  }
+}
