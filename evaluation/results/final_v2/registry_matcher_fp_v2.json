@@ -1,0 +1,45 @@
+{
+  "confirmed_fingerprints_checked_against": 16,
+  "threshold": 0.85,
+  "per_track": {
+    "v2_benign_openssl_t1": {
+      "n": 287,
+      "max_sim": 0.7104,
+      "mean_sim": 0.7049,
+      "n_above_threshold": 0
+    },
+    "v2_benign_openssl_t2": {
+      "n": 281,
+      "max_sim": 0.7376,
+      "mean_sim": 0.705,
+      "n_above_threshold": 0
+    },
+    "v2_benign_openssl_t3": {
+      "n": 276,
+      "max_sim": 0.7376,
+      "mean_sim": 0.7051,
+      "n_above_threshold": 0
+    },
+    "v2_benign_gcc_t1": {
+      "n": 387168,
+      "max_sim": 0.7252,
+      "mean_sim": 0.7102,
+      "n_above_threshold": 0
+    },
+    "v2_benign_gcc_t2": {
+      "n": 429931,
+      "max_sim": 0.7252,
+      "mean_sim": 0.7105,
+      "n_above_threshold": 0
+    },
+    "v2_benign_gcc_t3": {
+      "n": 497647,
+      "max_sim": 0.7252,
+      "mean_sim": 0.711,
+      "n_above_threshold": 0
+    }
+  },
+  "total_observations": 1315590,
+  "total_at_or_above_threshold": 0,
+  "any_benign_elevated": false
+}
