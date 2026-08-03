@@ -1,0 +1,1084 @@
+{
+  "replay_verification": {
+    "v2_xmrig_fullspeed": {
+      "recorded_peak": 98.0,
+      "replayed_peak": 98.0,
+      "matches": true
+    },
+    "v2_xmrig_renamed": {
+      "recorded_peak": 98.0,
+      "replayed_peak": 98.0,
+      "matches": true
+    },
+    "v2_xmrig_evasion_1thread": {
+      "recorded_peak": 45.0,
+      "replayed_peak": 45,
+      "matches": true
+    },
+    "v2_xmrig_upx_packed": {
+      "recorded_peak": 98.0,
+      "replayed_peak": 98.0,
+      "matches": true
+    },
+    "v2_xmrig_4proc_split": {
+      "recorded_peak": 98.0,
+      "replayed_peak": 98.0,
+      "matches": true
+    },
+    "v2_stratum_client_t1": {
+      "recorded_peak": 91.0,
+      "replayed_peak": 91.0,
+      "matches": true
+    },
+    "browser_wasm_miner": {
+      "recorded_peak": 46.0,
+      "replayed_peak": 46.0,
+      "matches": true
+    }
+  },
+  "weight_only_ablation": {
+    "futex (syscall barrier signal)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 28.0,
+        "ablated_confidence": "LOW",
+        "delta": -11.0
+      }
+    },
+    "compute-pure (low I/O + high CPU)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "thread saturation": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 79.0,
+        "ablated_confidence": "HIGH",
+        "delta": -5.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 34.0,
+        "ablated_confidence": "LOW",
+        "delta": -5.0
+      }
+    },
+    "sustained high CPU%": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 40.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 1.0
+      }
+    },
+    "RandomX scratchpad (weighted term)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 76.0,
+        "ablated_confidence": "HIGH",
+        "delta": -8.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 43.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 4.0
+      }
+    },
+    "huge pages requested": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "scheduler CPU-boundedness": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 79.0,
+        "ablated_confidence": "HIGH",
+        "delta": -5.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "temporal sustained-detection": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 0.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 39.0,
+        "ablated_confidence": "LOW",
+        "delta": 0.0
+      }
+    },
+    "pool connection (weighted term)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 51.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    }
+  },
+  "evidence_ablation": {
+    "futex (syscall barrier signal)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 28.0,
+        "ablated_confidence": "LOW",
+        "delta": -11.0
+      }
+    },
+    "compute-pure (low I/O + high CPU)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "thread saturation": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 79.0,
+        "ablated_confidence": "HIGH",
+        "delta": -5.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 34.0,
+        "ablated_confidence": "LOW",
+        "delta": -5.0
+      }
+    },
+    "sustained high CPU%": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 38.0,
+        "ablated_confidence": "LOW",
+        "delta": 0.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 98.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 91.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 7.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 22.0,
+        "ablated_confidence": "LOW",
+        "delta": -17.0
+      }
+    },
+    "RandomX scratchpad (weighted term)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 23.0,
+        "ablated_confidence": "LOW",
+        "delta": -15.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 83.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -8.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 76.0,
+        "ablated_confidence": "HIGH",
+        "delta": -8.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 43.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 4.0
+      }
+    },
+    "huge pages requested": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 93.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 2.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "scheduler CPU-boundedness": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 86.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -5.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 79.0,
+        "ablated_confidence": "HIGH",
+        "delta": -5.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    },
+    "temporal sustained-detection": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": -7.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 84.0,
+        "ablated_confidence": "CRITICAL",
+        "delta": 0.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 39.0,
+        "ablated_confidence": "LOW",
+        "delta": 0.0
+      }
+    },
+    "pool connection (weighted term)": {
+      "v2_xmrig_fullspeed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_renamed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_evasion_1thread": {
+        "baseline_score": 38.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 45,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      },
+      "v2_xmrig_upx_packed": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_xmrig_4proc_split": {
+        "baseline_score": 91.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 58.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "v2_stratum_client_t1": {
+        "baseline_score": 84.0,
+        "baseline_confidence": "CRITICAL",
+        "ablated_score": 51.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": -33.0
+      },
+      "browser_wasm_miner": {
+        "baseline_score": 39.0,
+        "baseline_confidence": "LOW",
+        "ablated_score": 46.0,
+        "ablated_confidence": "MEDIUM",
+        "delta": 7.0
+      }
+    }
+  },
+  "weighted_sum_excluding_floors": {
+    "v2_xmrig_fullspeed": {
+      "final_score_with_floors": 98.0,
+      "final_confidence_with_floors": "CRITICAL",
+      "weighted_sum_excluding_floors": 98.0,
+      "floor_determines_outcome": false
+    },
+    "v2_xmrig_renamed": {
+      "final_score_with_floors": 98.0,
+      "final_confidence_with_floors": "CRITICAL",
+      "weighted_sum_excluding_floors": 98.0,
+      "floor_determines_outcome": false
+    },
+    "v2_xmrig_evasion_1thread": {
+      "final_score_with_floors": 45,
+      "final_confidence_with_floors": "MEDIUM",
+      "weighted_sum_excluding_floors": 38.0,
+      "floor_determines_outcome": true
+    },
+    "v2_xmrig_upx_packed": {
+      "final_score_with_floors": 98.0,
+      "final_confidence_with_floors": "CRITICAL",
+      "weighted_sum_excluding_floors": 98.0,
+      "floor_determines_outcome": false
+    },
+    "v2_xmrig_4proc_split": {
+      "final_score_with_floors": 98.0,
+      "final_confidence_with_floors": "CRITICAL",
+      "weighted_sum_excluding_floors": 98.0,
+      "floor_determines_outcome": false
+    },
+    "v2_stratum_client_t1": {
+      "final_score_with_floors": 91.0,
+      "final_confidence_with_floors": "CRITICAL",
+      "weighted_sum_excluding_floors": 91.0,
+      "floor_determines_outcome": false
+    },
+    "browser_wasm_miner": {
+      "final_score_with_floors": 46.0,
+      "final_confidence_with_floors": "MEDIUM",
+      "weighted_sum_excluding_floors": 46.0,
+      "floor_determines_outcome": false
+    }
+  },
+  "per_feature_contribution_at_peak": {
+    "v2_xmrig_fullspeed": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 14.0,
+      "pool connection (weighted term)": 40.0
+    },
+    "v2_xmrig_renamed": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 14.0,
+      "pool connection (weighted term)": 40.0
+    },
+    "v2_xmrig_evasion_1thread": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 6.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 0.0,
+      "pool connection (weighted term)": 0.0
+    },
+    "v2_xmrig_upx_packed": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 14.0,
+      "pool connection (weighted term)": 40.0
+    },
+    "v2_xmrig_4proc_split": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 14.0,
+      "pool connection (weighted term)": 40.0
+    },
+    "v2_stratum_client_t1": {
+      "futex (syscall barrier signal)": 0.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 0.0,
+      "RandomX scratchpad (weighted term)": 15.0,
+      "huge pages requested": 5.0,
+      "scheduler CPU-boundedness": 12.0,
+      "temporal sustained-detection": 7.0,
+      "pool connection (weighted term)": 40.0
+    },
+    "browser_wasm_miner": {
+      "futex (syscall barrier signal)": 18.0,
+      "compute-pure (low I/O + high CPU)": 0.0,
+      "thread saturation": 12.0,
+      "sustained high CPU%": 24.0,
+      "RandomX scratchpad (weighted term)": 3.0,
+      "huge pages requested": 0.0,
+      "scheduler CPU-boundedness": 0.0,
+      "temporal sustained-detection": 7.0,
+      "pool connection (weighted term)": 0.0
+    }
+  }
+}
