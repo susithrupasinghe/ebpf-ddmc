@@ -1,5 +1,5 @@
 {
-  "captured_at_unix": 1785777287.602207,
+  "captured_at_unix": 1785783727.4937189,
   "kernel_release": "7.0.0-28-generic",
   "uname_a": "Linux susith 7.0.0-28-generic #28-Ubuntu SMP PREEMPT_DYNAMIC Sun Jun 21 00:50:10 UTC 2026 aarch64 GNU/Linux",
   "machine_arch": "aarch64",
@@ -7,10 +7,10 @@
   "mem_total_kb": 3462108,
   "mem_total_gb": 3.3,
   "git": {
-    "sha": "0884ea31f943682a973a6c112ba866135660f9e3",
+    "sha": "16ab31684f86854d687647d94d8d2060485808e9",
     "dirty": true,
     "dirty_files": [
-      "?? evaluation/results/final_v2/detection_latency_per_track.json"
+      "?? evaluation/results/final_v2/registry_gate_replay_20260804T002201.json"
     ]
   }
 }

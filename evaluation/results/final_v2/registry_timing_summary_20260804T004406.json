@@ -1,0 +1,47 @@
+{
+  "primary_metric": "first HIGH-or-above tier alert",
+  "enabled": {
+    "n": 3,
+    "mean_s": 24.628,
+    "sd_s": 4.577,
+    "values": [
+      19.21218180656433,
+      24.266395092010498,
+      30.40675115585327
+    ]
+  },
+  "disabled": {
+    "n": 3,
+    "mean_s": 33.152,
+    "sd_s": 1.609,
+    "values": [
+      35.110331773757935,
+      33.176594257354736,
+      31.16838788986206
+    ]
+  },
+  "timeouts_high_or_above": {
+    "enabled": 0,
+    "disabled": 0
+  },
+  "difference_s": 8.524,
+  "n_trials_total": 6,
+  "secondary_metric_exact_high": {
+    "enabled": {
+      "n": 3,
+      "mean_s": 24.628,
+      "sd_s": 4.577,
+      "values": [
+        19.21218180656433,
+        24.266395092010498,
+        30.40675115585327
+      ]
+    },
+    "disabled": null,
+    "timeouts": {
+      "enabled": 0,
+      "disabled": 3
+    },
+    "note": "strict confidence=='HIGH' only; disabled-condition trials where the score skipped the HIGH band entirely (MEDIUM->CRITICAL in one tick) show as timed_out here even though HIGH-or-above WAS reached -- see primary_metric above for the meaningful comparison."
+  }
+}
