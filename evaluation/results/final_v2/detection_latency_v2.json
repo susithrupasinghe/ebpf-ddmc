@@ -1,0 +1,108 @@
+{
+  "scan_cadence": {
+    "n_ticks_observed": 33,
+    "configured_interval_s": 5.0,
+    "gap_mean_s": 12.301093749701977,
+    "gap_sd_s": 1.7353014790975714,
+    "gap_min_s": 9.20300006866455,
+    "gap_max_s": 20.11899995803833,
+    "inflation_factor_mean_over_configured": 2.4602187499403954,
+    "gap_distribution": {
+      "<=5s": 0,
+      "5-10s": 3,
+      "10-20s": 25,
+      "20-34s": 1,
+      ">34s": 0
+    },
+    "tracked_count_mean": 140.4848484848485,
+    "tracked_count_min": 106,
+    "tracked_count_max": 148,
+    "scored_count_mean": 37.96969696969697,
+    "scored_count_min": 26,
+    "scored_count_max": 106,
+    "measured_under": "v2_scancadence_probe (xmrig full speed via mock stratum, 300s, DEBUG log level)"
+  },
+  "time_to_first_alert_per_track": {
+    "v2_xmrig_fullspeed": {
+      "time_to_first_LOW_s": 46.4,
+      "time_to_first_MEDIUM_s": 46.4,
+      "time_to_first_HIGH_s": 61.7,
+      "time_to_first_CRITICAL_s": 139.9
+    },
+    "v2_xmrig_renamed": {
+      "time_to_first_LOW_s": 36.5,
+      "time_to_first_MEDIUM_s": 36.5,
+      "time_to_first_HIGH_s": 51.8,
+      "time_to_first_CRITICAL_s": 130.1
+    },
+    "v2_xmrig_evasion_1thread": {
+      "time_to_first_LOW_s": 21.5,
+      "time_to_first_MEDIUM_s": 36.8,
+      "time_to_first_HIGH_s": null,
+      "time_to_first_CRITICAL_s": null
+    },
+    "v2_xmrig_upx_packed": {
+      "time_to_first_LOW_s": 48.0,
+      "time_to_first_MEDIUM_s": 48.0,
+      "time_to_first_HIGH_s": 63.4,
+      "time_to_first_CRITICAL_s": 136.2
+    },
+    "v2_xmrig_4proc_split": {
+      "time_to_first_LOW_s": 36.4,
+      "time_to_first_MEDIUM_s": 36.4,
+      "time_to_first_HIGH_s": 53.3,
+      "time_to_first_CRITICAL_s": 131.0
+    },
+    "v2_stratum_client_t1": {
+      "time_to_first_LOW_s": 46.4,
+      "time_to_first_MEDIUM_s": 46.4,
+      "time_to_first_HIGH_s": 63.9,
+      "time_to_first_CRITICAL_s": null
+    },
+    "v2_stratum_client_t2": {
+      "time_to_first_LOW_s": 52.3,
+      "time_to_first_MEDIUM_s": 52.3,
+      "time_to_first_HIGH_s": 68.7,
+      "time_to_first_CRITICAL_s": null
+    },
+    "v2_stratum_client_t3": {
+      "time_to_first_LOW_s": 47.7,
+      "time_to_first_MEDIUM_s": 47.7,
+      "time_to_first_HIGH_s": 66.4,
+      "time_to_first_CRITICAL_s": null
+    },
+    "browser_wasm_miner": {
+      "time_to_first_LOW_s": 36.9,
+      "time_to_first_MEDIUM_s": 86.2,
+      "time_to_first_HIGH_s": null,
+      "time_to_first_CRITICAL_s": null
+    }
+  },
+  "time_to_first_alert_replicates_mean_sd": {
+    "stratum_client_LOW_MEDIUM_s": {
+      "mean": 48.8,
+      "sd": 2.53,
+      "n": 3
+    },
+    "stratum_client_HIGH_s": {
+      "mean": 66.33,
+      "sd": 1.96,
+      "n": 3
+    },
+    "fullspeed_variants_LOW_MEDIUM_s": {
+      "mean": 41.83,
+      "sd": 5.4,
+      "n": 4
+    },
+    "fullspeed_variants_HIGH_s": {
+      "mean": 57.55,
+      "sd": 5.06,
+      "n": 4
+    },
+    "fullspeed_variants_CRITICAL_s": {
+      "mean": 134.3,
+      "sd": 3.98,
+      "n": 4
+    }
+  }
+}

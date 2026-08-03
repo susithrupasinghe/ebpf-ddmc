@@ -1,0 +1,56 @@
+{
+  "v2_xmrig_fullspeed": {
+    "time_to_first_LOW_s": 46.4,
+    "time_to_first_MEDIUM_s": 46.4,
+    "time_to_first_HIGH_s": 61.7,
+    "time_to_first_CRITICAL_s": 139.9
+  },
+  "v2_xmrig_renamed": {
+    "time_to_first_LOW_s": 36.5,
+    "time_to_first_MEDIUM_s": 36.5,
+    "time_to_first_HIGH_s": 51.8,
+    "time_to_first_CRITICAL_s": 130.1
+  },
+  "v2_xmrig_evasion_1thread": {
+    "time_to_first_LOW_s": 21.5,
+    "time_to_first_MEDIUM_s": 36.8,
+    "time_to_first_HIGH_s": null,
+    "time_to_first_CRITICAL_s": null
+  },
+  "v2_xmrig_upx_packed": {
+    "time_to_first_LOW_s": 48.0,
+    "time_to_first_MEDIUM_s": 48.0,
+    "time_to_first_HIGH_s": 63.4,
+    "time_to_first_CRITICAL_s": 136.2
+  },
+  "v2_xmrig_4proc_split": {
+    "time_to_first_LOW_s": 36.4,
+    "time_to_first_MEDIUM_s": 36.4,
+    "time_to_first_HIGH_s": 53.3,
+    "time_to_first_CRITICAL_s": 131.0
+  },
+  "v2_stratum_client_t1": {
+    "time_to_first_LOW_s": 46.4,
+    "time_to_first_MEDIUM_s": 46.4,
+    "time_to_first_HIGH_s": 63.9,
+    "time_to_first_CRITICAL_s": null
+  },
+  "v2_stratum_client_t2": {
+    "time_to_first_LOW_s": 52.3,
+    "time_to_first_MEDIUM_s": 52.3,
+    "time_to_first_HIGH_s": 68.7,
+    "time_to_first_CRITICAL_s": null
+  },
+  "v2_stratum_client_t3": {
+    "time_to_first_LOW_s": 47.7,
+    "time_to_first_MEDIUM_s": 47.7,
+    "time_to_first_HIGH_s": 66.4,
+    "time_to_first_CRITICAL_s": null
+  },
+  "browser_wasm_miner": {
+    "time_to_first_LOW_s": 36.9,
+    "time_to_first_MEDIUM_s": 86.2,
+    "time_to_first_HIGH_s": null,
+    "time_to_first_CRITICAL_s": null
+  }
+}
