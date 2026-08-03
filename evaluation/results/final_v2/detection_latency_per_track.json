@@ -1,55 +1,55 @@
 {
   "v2_xmrig_fullspeed": {
-    "time_to_first_LOW_s": 46.4,
-    "time_to_first_MEDIUM_s": 46.4,
-    "time_to_first_HIGH_s": 61.7,
-    "time_to_first_CRITICAL_s": 139.9
+    "time_to_first_LOW_s": 27.4,
+    "time_to_first_MEDIUM_s": 27.4,
+    "time_to_first_HIGH_s": 41.5,
+    "time_to_first_CRITICAL_s": 41.5
   },
   "v2_xmrig_renamed": {
-    "time_to_first_LOW_s": 36.5,
-    "time_to_first_MEDIUM_s": 36.5,
-    "time_to_first_HIGH_s": 51.8,
-    "time_to_first_CRITICAL_s": 130.1
+    "time_to_first_LOW_s": 20.2,
+    "time_to_first_MEDIUM_s": 20.2,
+    "time_to_first_HIGH_s": 35.3,
+    "time_to_first_CRITICAL_s": 35.3
   },
   "v2_xmrig_evasion_1thread": {
-    "time_to_first_LOW_s": 21.5,
-    "time_to_first_MEDIUM_s": 36.8,
+    "time_to_first_LOW_s": 13.1,
+    "time_to_first_MEDIUM_s": 28.1,
     "time_to_first_HIGH_s": null,
     "time_to_first_CRITICAL_s": null
   },
   "v2_xmrig_upx_packed": {
-    "time_to_first_LOW_s": 48.0,
-    "time_to_first_MEDIUM_s": 48.0,
-    "time_to_first_HIGH_s": 63.4,
-    "time_to_first_CRITICAL_s": 136.2
+    "time_to_first_LOW_s": 23.3,
+    "time_to_first_MEDIUM_s": 23.3,
+    "time_to_first_HIGH_s": 38.4,
+    "time_to_first_CRITICAL_s": 38.4
   },
   "v2_xmrig_4proc_split": {
-    "time_to_first_LOW_s": 36.4,
-    "time_to_first_MEDIUM_s": 36.4,
-    "time_to_first_HIGH_s": 53.3,
-    "time_to_first_CRITICAL_s": 131.0
+    "time_to_first_LOW_s": 30.1,
+    "time_to_first_MEDIUM_s": 30.1,
+    "time_to_first_HIGH_s": 45.2,
+    "time_to_first_CRITICAL_s": 45.2
   },
   "v2_stratum_client_t1": {
-    "time_to_first_LOW_s": 46.4,
-    "time_to_first_MEDIUM_s": 46.4,
-    "time_to_first_HIGH_s": 63.9,
-    "time_to_first_CRITICAL_s": null
+    "time_to_first_LOW_s": 45.8,
+    "time_to_first_MEDIUM_s": 45.8,
+    "time_to_first_HIGH_s": 60.9,
+    "time_to_first_CRITICAL_s": 60.9
   },
   "v2_stratum_client_t2": {
-    "time_to_first_LOW_s": 52.3,
-    "time_to_first_MEDIUM_s": 52.3,
-    "time_to_first_HIGH_s": 68.7,
-    "time_to_first_CRITICAL_s": null
+    "time_to_first_LOW_s": 32.5,
+    "time_to_first_MEDIUM_s": 32.5,
+    "time_to_first_HIGH_s": 47.7,
+    "time_to_first_CRITICAL_s": 47.7
   },
   "v2_stratum_client_t3": {
-    "time_to_first_LOW_s": 47.7,
-    "time_to_first_MEDIUM_s": 47.7,
-    "time_to_first_HIGH_s": 66.4,
-    "time_to_first_CRITICAL_s": null
+    "time_to_first_LOW_s": 25.5,
+    "time_to_first_MEDIUM_s": 25.5,
+    "time_to_first_HIGH_s": 40.6,
+    "time_to_first_CRITICAL_s": 40.6
   },
   "browser_wasm_miner": {
-    "time_to_first_LOW_s": 36.9,
-    "time_to_first_MEDIUM_s": 86.2,
+    "time_to_first_LOW_s": 24.3,
+    "time_to_first_MEDIUM_s": 68.8,
     "time_to_first_HIGH_s": null,
     "time_to_first_CRITICAL_s": null
   }
