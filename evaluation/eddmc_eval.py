@@ -1145,6 +1145,17 @@ def _group_by_pid(rows):
     return groups
 
 
+def _max_score_by_tick(rows):
+    """Aggregate multiple PIDs sharing one capture tick (parallel worker
+    processes in some benign/mining tracks) down to the worst-case score per
+    tick, so 'one line per track' is well-defined even for multi-PID tracks."""
+    by_tick = {}
+    for r in rows:
+        t = float(r["elapsed_s"])
+        by_tick[t] = max(by_tick.get(t, 0.0), float(r["score"]))
+    return sorted(by_tick.items())
+
+
 def baseline_b1(rows_for_pid, cpu_series, T, D):
     """Flag once rolling utilisation stays >= T% for >= D seconds, continuously."""
     flags = [False] * len(rows_for_pid)
@@ -2217,6 +2228,176 @@ def build_cascade_figure(files):
     fig.tight_layout()
     os.makedirs(FIGURES_DIR, exist_ok=True)
     out_path = os.path.join(FIGURES_DIR, "fig_cascade_progression.png")
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+    print(f"[report] wrote {out_path}")
+    return out_path
+
+
+def build_score_trajectory_figure():
+    """Composite score vs. time for two mining and two benign representative
+    tracks, aggregated to worst-case score per capture tick. Reads whichever
+    FINAL_DIR is active (respects EDDMC_EVAL_OUT) via _glob_latest -- run with
+    EDDMC_EVAL_OUT=final_v2 to plot the corrected-scheduler (v2) tracks."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("[report] matplotlib not available in this interpreter -- "
+              "fig_score_trajectory.png not generated.", file=sys.stderr)
+        return None
+
+    BLUE, ORANGE, AQUA, YELLOW = "#2a78d6", "#eb6834", "#1baf7a", "#eda100"
+    GRID_GRAY = "#9a9a9a"
+    tracks = [
+        ("XMRig, full speed", "capture_v2_xmrig_fullspeed_*.csv", BLUE),
+        ("XMRig, UPX-packed", "capture_v2_xmrig_upx_packed_*.csv", ORANGE),
+        ("Benign: OpenSSL crypto benchmark", "capture_v2_benign_openssl_t1_*.csv", AQUA),
+        ("Benign: parallel gcc compilation", "capture_v2_benign_gcc_t1_*.csv", YELLOW),
+    ]
+
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+    plotted = 0
+    for label, pattern, color in tracks:
+        path = _glob_latest(pattern)
+        if not path:
+            print(f"[report] no file for {pattern} -- skipping '{label}' in "
+                  f"fig_score_trajectory.png", file=sys.stderr)
+            continue
+        series = _max_score_by_tick(_load_rows(path))
+        xs = [t for t, _ in series]
+        ys = [s for _, s in series]
+        ax.plot(xs, ys, color=color, linewidth=2, label=label, solid_capstyle="round")
+        plotted += 1
+    if not plotted:
+        print("[report] no tracks available -- fig_score_trajectory.png not generated.", file=sys.stderr)
+        plt.close(fig)
+        return None
+
+    for y, tier in [(20, "LOW"), (40, "MEDIUM"), (60, "HIGH"), (80, "CRITICAL")]:
+        ax.axhline(y, color=GRID_GRAY, linewidth=1, linestyle=(0, (4, 3)), zorder=0)
+        ax.text(1, y + 1.2, tier, color=GRID_GRAY, fontsize=8, va="bottom")
+
+    ax.set_xlabel("Elapsed time (s)")
+    ax.set_ylabel("Composite suspicion score (0-100)")
+    ax.set_ylim(-3, 103)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(loc="upper left", frameon=False, fontsize=9)
+    fig.tight_layout()
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    out_path = os.path.join(FIGURES_DIR, "fig_score_trajectory.png")
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+    print(f"[report] wrote {out_path}")
+    return out_path
+
+
+def build_feature_contribution_figure():
+    """Per-feature weighted contribution at each track's own replayed peak
+    tick, mining vs. benign, floor-excluded (same weighted-sum-excluding-
+    floors basis cmd_ablation uses). Recomputes fresh for both tracks via
+    _replay_row_ablated() rather than depending on ablation_v2_*.json, which
+    only covers mining tracks -- keeps this figure self-contained. Reads
+    whichever FINAL_DIR is active (respects EDDMC_EVAL_OUT)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("[report] matplotlib not available in this interpreter -- "
+              "fig_feature_contribution.png not generated.", file=sys.stderr)
+        return None
+
+    BLUE, AQUA, GRID_GRAY = "#2a78d6", "#1baf7a", "#9a9a9a"
+    mining_path = _glob_latest("capture_v2_xmrig_fullspeed_*.csv")
+    benign_path = _glob_latest("capture_v2_benign_openssl_t1_*.csv")
+    if not mining_path or not benign_path:
+        print("[report] missing mining/benign v2 track -- "
+              "fig_feature_contribution.png not generated.", file=sys.stderr)
+        return None
+
+    def _peak_contributions(path):
+        rows = _load_rows(path)
+        replayed = replay_track(rows)
+        _, peak_row = max(((res, r) for r, res, _, _ in replayed), key=lambda t: t[0].score)
+        floor_excluded_baseline = _replay_row_ablated(peak_row, group_keys=None, zero_floors=True).score
+        contributions = {}
+        for group_name, group_keys in ABLATION_GROUPS.items():
+            ablated = _replay_row_ablated(peak_row, group_keys=group_keys, zero_floors=True)
+            contributions[group_name] = round(floor_excluded_baseline - ablated.score, 2)
+        return contributions
+
+    m = _peak_contributions(mining_path)
+    b = _peak_contributions(benign_path)
+    features = list(ABLATION_GROUPS.keys())
+
+    x = range(len(features))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(10, 5.5))
+    ax.bar([i - width / 2 for i in x], [m[f] for f in features], width,
+           color=BLUE, label="XMRig, full speed, peak tick")
+    ax.bar([i + width / 2 for i in x], [b[f] for f in features], width,
+           color=AQUA, label="Benign: OpenSSL, peak tick")
+    ax.set_xticks(list(x))
+    ax.set_xticklabels(features, rotation=35, ha="right", fontsize=8)
+    ax.set_ylabel("Weighted contribution to composite score")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(loc="upper right", frameon=False, fontsize=9)
+    ax.text(0.01, 0.98, "Excludes hard-evidence floors (applied after the weighted sum) -- "
+            "see evaluation/results/final_v2/ablation_v2_*.json",
+            transform=ax.transAxes, fontsize=7, color=GRID_GRAY, va="top")
+    fig.tight_layout()
+    os.makedirs(FIGURES_DIR, exist_ok=True)
+    out_path = os.path.join(FIGURES_DIR, "fig_feature_contribution.png")
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+    print(f"[report] wrote {out_path}")
+    return out_path
+
+
+def build_latency_distribution_figure():
+    """Histogram of scan-cycle gaps. Uses the 39 real gaps measured during
+    Task 5 of the 2026-08 re-evaluation round (raw DEBUG timestamps in
+    /tmp/eddmc_v2_scancadence.log, consecutive-difference of 40 'scan tick
+    at <ts>' lines) -- a real, larger sample than the 13 gaps the original
+    (pre-v2) figure used, not a re-measurement invented for this figure."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print("[report] matplotlib not available in this interpreter -- "
+              "fig_latency_distribution.png not generated.", file=sys.stderr)
+        return None
+
+    BLUE, ORANGE, GRID_GRAY = "#2a78d6", "#eb6834", "#9a9a9a"
+    # Source: /tmp/eddmc_v2_scancadence.log, Task 5 of the v2 re-evaluation
+    # round (2026-08-04). 40 "scan tick at <ts>" DEBUG lines -> 39 consecutive
+    # gaps. See evaluation/results/final_v2/detection_latency_v2.json for the
+    # summary stats (mean=12.30s, sd=1.74s, min=9.2s, max=20.1s) this raw list
+    # was already used to compute.
+    gaps = [9.2, 9.64, 9.87, 10.26, 11.37, 14.98, 20.12, 12.54, 12.27, 12.15,
+            12.16, 12.17, 12.16, 12.2, 12.22, 12.31, 12.28, 12.38, 12.34, 12.27,
+            12.31, 12.37, 12.34, 12.38, 12.31, 12.62, 12.47, 12.45, 12.45, 12.15,
+            12.35, 12.54, 12.4, 12.94, 12.27, 12.82, 12.69, 12.48, 13.46]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.hist(gaps, bins=8, color=BLUE, edgecolor="white", linewidth=1.2)
+    ax.axvline(5, color=ORANGE, linewidth=2, linestyle=(0, (4, 3)), label="Configured scan interval (5s)")
+    ax.set_xlabel("Scan-cycle gap (s)")
+    ax.set_ylabel("Count")
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.legend(loc="upper right", frameon=False, fontsize=9)
+    ax.text(0.98, 0.80, f"n={len(gaps)} gaps, single measurement run\n"
+            "(v2 re-evaluation, Task 5 scan-cadence log)", transform=ax.transAxes,
+            fontsize=8, color=GRID_GRAY, ha="right", va="top")
+    fig.tight_layout()
+    out_path = os.path.join(FIGURES_DIR, "fig_latency_distribution.png")
+    os.makedirs(FIGURES_DIR, exist_ok=True)
     fig.savefig(out_path, dpi=200)
     plt.close(fig)
     print(f"[report] wrote {out_path}")
